@@ -1,0 +1,281 @@
+### ==========================================
+### 1. SHOP ENDPOINTS
+### ==========================================
+
+### 1a. Create First Shop (Fresh Mart)
+POST http://localhost:8080/shops
+Content-Type: application/json
+
+{
+  "name": "Fresh Mart",
+  "address": "123 Main Street, Sector 5",
+  "phone": "+919876543210"
+}
+
+### 1b. Create Second Shop (Local Mart) - For Isolation Testing
+POST http://localhost:8080/shops
+Content-Type: application/json
+
+{
+  "name": "Local Mart",
+  "address": "456 Market Road, Sector 2",
+  "phone": "+919876543211"
+}
+
+### 1c. Get All Shops
+GET http://localhost:8080/shops
+
+
+### ==========================================
+### 2. CATEGORY ENDPOINTS (Day 6)
+### ==========================================
+
+### 2a. Create Category 1 (Dairy) for Shop 1
+POST http://localhost:8080/shops/1/categories
+Content-Type: application/json
+
+{
+  "name": "Dairy",
+  "description": "Milk and dairy products"
+}
+
+### 2b. Create Category 2 (Bakery) for Shop 1
+POST http://localhost:8080/shops/1/categories
+Content-Type: application/json
+
+{
+  "name": "Bakery",
+  "description": "Freshly baked bread and pastries"
+}
+
+### 2c. Create Category 3 (Snacks) for Shop 1
+POST http://localhost:8080/shops/1/categories
+Content-Type: application/json
+
+{
+  "name": "Snacks",
+  "description": "Chips, cookies, and quick snacks"
+}
+
+### 2d. Create Category 4 (Beverages) for Shop 1
+POST http://localhost:8080/shops/1/categories
+Content-Type: application/json
+
+{
+  "name": "Beverages",
+  "description": "Tea, coffee, juice, and waters"
+}
+
+### 2e. Get All Categories for Shop 1
+GET http://localhost:8080/shops/1/categories
+
+### 2f. Update Category 1 (Dairy -> Dairy & Frozen)
+PUT http://localhost:8080/categories/1
+Content-Type: application/json
+
+{
+  "name": "Dairy & Frozen",
+  "description": "Milk, cheese, butter and frozen dairy items"
+}
+
+
+### ==========================================
+### 3. PRODUCT ENDPOINTS & CATEGORY LINKAGE (Day 6)
+### ==========================================
+
+### 3a. Dairy Products (Category 1)
+POST http://localhost:8080/shops/1/products
+Content-Type: application/json
+
+{
+  "name": "Amul Milk 1L",
+  "description": "1 litre full cream milk",
+  "price": 65.0,
+  "stockQuantity": 20,
+  "categoryId": 1
+}
+
+###
+POST http://localhost:8080/shops/1/products
+Content-Type: application/json
+
+{
+  "name": "Mother Dairy Milk 1L",
+  "description": "Toned milk pouch",
+  "price": 54.0,
+  "stockQuantity": 15,
+  "categoryId": 1
+}
+
+###
+POST http://localhost:8080/shops/1/products
+Content-Type: application/json
+
+{
+  "name": "Amul Butter 500g",
+  "description": "Salted butter pack",
+  "price": 275.0,
+  "stockQuantity": 8,
+  "categoryId": 1
+}
+
+###
+POST http://localhost:8080/shops/1/products
+Content-Type: application/json
+
+{
+  "name": "Processed Cheese Slices",
+  "description": "200g cheese slice pack",
+  "price": 140.0,
+  "stockQuantity": 3,
+  "categoryId": 1
+}
+
+### 3b. Bakery Products (Category 2)
+POST http://localhost:8080/shops/1/products
+Content-Type: application/json
+
+{
+  "name": "Whole Wheat Bread 400g",
+  "description": "Fresh brown bread",
+  "price": 45.0,
+  "stockQuantity": 12,
+  "categoryId": 2
+}
+
+###
+POST http://localhost:8080/shops/1/products
+Content-Type: application/json
+
+{
+  "name": "Butter Croissant",
+  "description": "French flaky butter pastry",
+  "price": 80.0,
+  "stockQuantity": 2,
+  "categoryId": 2
+}
+
+### 3c. Snack Products (Category 3)
+POST http://localhost:8080/shops/1/products
+Content-Type: application/json
+
+{
+  "name": "Digestive Biscuits 250g",
+  "description": "High fibre biscuits",
+  "price": 50.0,
+  "stockQuantity": 30,
+  "categoryId": 3
+}
+
+###
+POST http://localhost:8080/shops/1/products
+Content-Type: application/json
+
+{
+  "name": "Potato Chips Salted 100g",
+  "description": "Crispy salted potato chips",
+  "price": 30.0,
+  "stockQuantity": 50,
+  "categoryId": 3
+}
+
+###
+POST http://localhost:8080/shops/1/products
+Content-Type: application/json
+
+{
+  "name": "Choco Chip Cookies 150g",
+  "description": "Rich chocolate cookies",
+  "price": 90.0,
+  "stockQuantity": 4,
+  "categoryId": 3
+}
+
+### 3d. Beverage Products (Category 4)
+POST http://localhost:8080/shops/1/products
+Content-Type: application/json
+
+{
+  "name": "Orange Juice 1L",
+  "description": "100% natural orange juice",
+  "price": 120.0,
+  "stockQuantity": 10,
+  "categoryId": 4
+}
+
+###
+POST http://localhost:8080/shops/1/products
+Content-Type: application/json
+
+{
+  "name": "Masala Tea Bags 100s",
+  "description": "Aromatic spices tea",
+  "price": 220.0,
+  "stockQuantity": 18,
+  "categoryId": 4
+}
+
+###
+POST http://localhost:8080/shops/1/products
+Content-Type: application/json
+
+{
+  "name": "Instant Coffee 100g",
+  "description": "Rich roast coffee powder",
+  "price": 310.0,
+  "stockQuantity": 6,
+  "categoryId": 4
+}
+
+###
+POST http://localhost:8080/shops/1/products
+Content-Type: application/json
+
+{
+  "name": "Mineral Water 1L",
+  "description": "Packaged drinking water",
+  "price": 20.0,
+  "stockQuantity": 100,
+  "categoryId": 4
+}
+
+###
+POST http://localhost:8080/shops/1/products
+Content-Type: application/json
+
+{
+  "name": "Milk Powder 500g",
+  "description": "Instant dairy milk powder",
+  "price": 260.0,
+  "stockQuantity": 2,
+  "categoryId": 4
+}
+
+
+### ==========================================
+### 4. DERIVED QUERIES, PAGINATION & SORTING TESTS (Day 6)
+### ==========================================
+
+### 4a. Get All Products with Pagination (Page 0, Size 5)
+GET http://localhost:8080/shops/1/products?page=0&size=5
+
+### 4b. Get Next Page (Page 1, Size 5)
+GET http://localhost:8080/shops/1/products?page=1&size=5
+
+### 4c. Filter by Category (Category 1 - Dairy)
+GET http://localhost:8080/shops/1/products?categoryId=1
+
+### 4d. Search by Product Name ("milk")
+GET http://localhost:8080/shops/1/products?search=milk
+
+### 4e. Sorting by Price (Descending)
+GET http://localhost:8080/shops/1/products?sort=price,desc
+
+### 4f. Sorting by Price (Ascending)
+GET http://localhost:8080/shops/1/products?sort=price,asc
+
+### 4g. COMBINED QUERY: Category + Search + Sorting + Pagination
+GET http://localhost:8080/shops/1/products?categoryId=1&search=milk&page=0&size=5&sort=price,asc
+
+### 4h. BONUS CHALLENGE: Low Stock Products (stockQuantity < 5)
+GET http://localhost:8080/shops/1/products/low-stock?threshold=5
