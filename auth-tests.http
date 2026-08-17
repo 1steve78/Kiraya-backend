@@ -1,0 +1,39 @@
+### Step 1: Register a New User
+# Expected Response: 201 Created
+POST http://localhost:8080/auth/register
+Content-Type: application/json
+
+{
+  "name": "John Doe",
+  "email": "john.doe@example.com",
+  "password": "password123"
+}
+
+###
+
+### Step 2: Log In to Get JWT Token
+# Expected Response: 200 OK with JWT Token and User Info
+# @name loginResponse
+POST http://localhost:8080/auth/login
+Content-Type: application/json
+
+{
+  "email": "john.doe@example.com",
+  "password": "password123"
+}
+
+### Store Token Variable (Automatic in IntelliJ / REST Client)
+@authToken = {{loginResponse.response.body.token}}
+
+###
+
+### Step 3: Get Current User (Fails - No Authorization Header)
+# Expected Response: 403 Forbidden / 401 Unauthorized
+GET http://localhost:8080/auth/me
+
+###
+
+### Step 4: Get Current User (Passes - With Bearer Token)
+# Expected Response: 200 OK with User Details
+GET http://localhost:8080/auth/me
+Authorization: Bearer {{authToken}}
