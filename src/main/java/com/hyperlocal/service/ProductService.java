@@ -2,9 +2,8 @@ package com.hyperlocal.service;
 
 import com.hyperlocal.dto.ProductRequest;
 import com.hyperlocal.dto.ProductResponse;
-import com.hyperlocal.entity.Category;
-import com.hyperlocal.entity.Product;
-import com.hyperlocal.entity.Shop;
+import com.hyperlocal.entity.*;
+import com.hyperlocal.exception.AccessDeniedException;
 import com.hyperlocal.exception.CategoryNotFoundException;
 import com.hyperlocal.exception.ProductNotFoundException;
 import com.hyperlocal.exception.ShopNotFoundException;
@@ -31,9 +30,10 @@ public class ProductService {
         this.categoryRepository = categoryRepository;
     }
 
-    public ProductResponse createProduct(Long shopId, ProductRequest request) {
+    public ProductResponse createProduct(Long shopId, ProductRequest request , User currentUser) {
         Shop shop = shopRepository.findById(shopId)
                 .orElseThrow(() -> new ShopNotFoundException("Shop not found with id: " + shopId));
+        verifyShopOwnership(shop, currentUser);
 
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new CategoryNotFoundException("Category not found with id: " + request.getCategoryId()));
@@ -125,5 +125,14 @@ public class ProductService {
         }
 
         return response;
+    }
+
+    private void verifyShopOwnership(Shop shop, User currentUser) {
+        if (currentUser.getRole() == Role.ADMIN) {
+            return;
+        }
+        if (shop.getOwner() == null || !shop.getOwner().getId().equals(currentUser.getId())) {
+            throw new AccessDeniedException("You do not have permission to modify inventory for this shop.");
+        }
     }
 }

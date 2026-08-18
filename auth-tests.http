@@ -4,8 +4,8 @@ POST http://localhost:8080/auth/register
 Content-Type: application/json
 
 {
-  "name": "John Doe",
-  "email": "john.doe@example.com",
+  "name": "don Doe",
+  "email": "don.doe@example.com",
   "password": "password123"
 }
 
@@ -13,27 +13,34 @@ Content-Type: application/json
 
 ### Step 2: Log In to Get JWT Token
 # Expected Response: 200 OK with JWT Token and User Info
-# @name loginResponse
+# @name login
 POST http://localhost:8080/auth/login
 Content-Type: application/json
 
 {
-  "email": "john.doe@example.com",
+  "email": "don.doe@example.com",
   "password": "password123"
 }
 
-### Store Token Variable (Automatic in IntelliJ / REST Client)
-@authToken = {{loginResponse.response.body.token}}
+### Automatically capture token in IntelliJ HTTP Client / REST Client
+@authToken = {{login.response.body.token}}
 
 ###
 
 ### Step 3: Get Current User (Fails - No Authorization Header)
-# Expected Response: 403 Forbidden / 401 Unauthorized
+# Expected Response: 401 Unauthorized / 403 Forbidden
 GET http://localhost:8080/auth/me
 
 ###
 
-### Step 4: Get Current User (Passes - With Bearer Token)
+### Step 4: Get Current User (Passes - Dynamic Token Variable)
 # Expected Response: 200 OK with User Details
 GET http://localhost:8080/auth/me
 Authorization: Bearer {{authToken}}
+
+###
+
+### Step 4 (Alternative): Get Current User (Passes - Manual Paste Token)
+# If your HTTP client does not support dynamic variables, paste the token from Step 2 after 'Bearer ' below:
+GET http://localhost:8080/auth/me
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiJkb24uZG9lQGV4YW1wbGUuY29tIiwiaWF0IjoxNzg3MDY1MzI5LCJleHAiOjE3ODcxNTE3Mjl9.TmY_BW0qfOrJpFb7IhxU8iYH0Mi4uTufeKLHMLrWy-I

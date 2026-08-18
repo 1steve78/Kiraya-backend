@@ -2,13 +2,17 @@ package com.hyperlocal.controller;
 
 import com.hyperlocal.dto.ProductRequest;
 import com.hyperlocal.dto.ProductResponse;
+import com.hyperlocal.entity.User;
 import com.hyperlocal.service.ProductService;
+import jakarta.validation.Valid;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -23,9 +27,14 @@ public class ProductController {
     }
 
     @PostMapping("/shops/{shopId}/products")
-    @ResponseStatus(HttpStatus.CREATED)
-    public ProductResponse createProduct(@PathVariable Long shopId, @RequestBody ProductRequest request) {
-        return productService.createProduct(shopId, request);
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')") // Lock it down!
+    public ResponseEntity<ProductResponse> createProduct(
+            @PathVariable Long shopId,
+            @Valid @RequestBody ProductRequest request,
+            @AuthenticationPrincipal User currentUser // Get the user from JWT
+    ) {
+        ProductResponse response = productService.createProduct(shopId, request, currentUser);
+        return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
     @GetMapping("/products/{id}")

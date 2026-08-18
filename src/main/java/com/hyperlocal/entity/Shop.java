@@ -16,6 +16,10 @@ public class Shop {
     private  String address;
     private  String phone;
 
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id", nullable = false)
+    private User owner;
+
 
     @OneToMany(mappedBy = "shop", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Product> products = new ArrayList<>();
@@ -24,6 +28,14 @@ public class Shop {
     private List<Category> categories = new ArrayList<>();
 
     public Shop() {
+    }
+
+    public User getOwner() {
+        return owner;
+    }
+
+    public void setOwner(User owner) {
+        this.owner = owner;
     }
 
     public Shop(Long id, String name , String address , String phone){
