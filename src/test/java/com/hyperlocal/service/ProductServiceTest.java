@@ -19,6 +19,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Optional;
 
@@ -45,14 +46,21 @@ public class ProductServiceTest {
     private Shop shop;
     private Category category;
     private Product product;
+    private com.hyperlocal.entity.User user;
 
     @BeforeEach
     void setUp() {
+        user = new com.hyperlocal.entity.User();
+        user.setId(1L);
+        user.setRole(com.hyperlocal.entity.Role.SHOP_OWNER);
+
         shop = new Shop(1L, "Fresh Mart", "123 Main St", "+919876543210");
+        shop.setOwner(user);
+
         category = new Category("Dairy", "Milk products", shop);
         category.setId(10L);
 
-        product = new Product("Amul Milk", "1L Pouch", 65.0, 20, shop, category);
+        product = new Product("Amul Milk", "1L Pouch", BigDecimal.valueOf(65.0), 20, shop, category);
         product.setId(100L);
     }
 
@@ -61,7 +69,7 @@ public class ProductServiceTest {
         ProductRequest request = new ProductRequest();
         request.setName("Amul Milk");
         request.setDescription("1L Pouch");
-        request.setPrice(65.0);
+        request.setPrice(BigDecimal.valueOf(65.0));
         request.setStockQuantity(20);
         request.setCategoryId(10L);
 
@@ -69,7 +77,7 @@ public class ProductServiceTest {
         when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
         when(productRepository.save(any(Product.class))).thenReturn(product);
 
-        ProductResponse response = productService.createProduct(1L, request);
+        ProductResponse response = productService.createProduct(1L, request, user);
 
         assertNotNull(response);
         assertEquals(100L, response.getId());
@@ -86,7 +94,7 @@ public class ProductServiceTest {
         when(shopRepository.findById(1L)).thenReturn(Optional.of(shop));
         when(categoryRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(CategoryNotFoundException.class, () -> productService.createProduct(1L, request));
+        assertThrows(CategoryNotFoundException.class, () -> productService.createProduct(1L, request, user));
     }
 
     @Test
@@ -114,5 +122,33 @@ public class ProductServiceTest {
 
         assertEquals(1, lowStock.size());
         assertEquals("Amul Milk", lowStock.get(0).getName());
+    }
+
+    @Test
+    void testUpdateProduct_Success() {
+        ProductRequest updateReq = new ProductRequest();
+        updateReq.setName("Amul Full Cream Milk");
+        updateReq.setDescription("1L Pouch Updated");
+        updateReq.setPrice(BigDecimal.valueOf(68.0));
+        updateReq.setStockQuantity(25);
+        updateReq.setCategoryId(10L);
+
+        when(productRepository.findById(100L)).thenReturn(Optional.of(product));
+        when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
+        when(productRepository.save(any(Product.class))).thenReturn(product);
+
+        ProductResponse response = productService.updateProduct(100L, updateReq, user);
+
+        assertNotNull(response);
+        assertEquals("Amul Full Cream Milk", product.getName());
+    }
+
+    @Test
+    void testDeleteProduct_Success() {
+        when(productRepository.findById(100L)).thenReturn(Optional.of(product));
+
+        productService.deleteProduct(100L, user);
+
+        verify(productRepository, times(1)).delete(product);
     }
 }

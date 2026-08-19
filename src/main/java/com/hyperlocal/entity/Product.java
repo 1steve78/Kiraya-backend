@@ -2,6 +2,8 @@ package com.hyperlocal.entity;
 
 import jakarta.persistence.*;
 
+import java.math.BigDecimal;
+
 @Entity
 @Table(name = "products")
 public class Product {
@@ -10,9 +12,15 @@ public class Product {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false)
     private String name;
+
     private String description;
-    private Double price;
+
+    @Column(nullable = false, precision = 10, scale = 2)
+    private BigDecimal price;
+
+    @Column(nullable = false)
     private Integer stockQuantity;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -26,7 +34,7 @@ public class Product {
     public Product() {
     }
 
-    public Product(Long id, String name, String description, Double price, Integer stockQuantity) {
+    public Product(Long id, String name, String description, BigDecimal price, Integer stockQuantity) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -34,7 +42,7 @@ public class Product {
         this.stockQuantity = stockQuantity;
     }
 
-    public Product(String name, String description, Double price, Integer stockQuantity, Shop shop, Category category) {
+    public Product(String name, String description, BigDecimal price, Integer stockQuantity, Shop shop, Category category) {
         this.name = name;
         this.description = description;
         this.price = price;
@@ -61,10 +69,10 @@ public class Product {
     public void setDescription(String description) {
         this.description = description;
     }
-    public Double getPrice() {
+    public BigDecimal getPrice() {
         return price;
     }
-    public void setPrice(Double price) {
+    public void setPrice(BigDecimal price) {
         this.price = price;
     }
     public Integer getStockQuantity() {

@@ -1,10 +1,12 @@
 package com.hyperlocal.dto;
 
+import java.math.BigDecimal;
+
 public class ProductResponse {
     private Long id;
     private String name;
     private String description;
-    private Double price;
+    private BigDecimal price;
     private Integer stockQuantity;
     private Long shopId;
     private Long categoryId;
@@ -14,7 +16,7 @@ public class ProductResponse {
     }
 
     // All-args constructor
-    public ProductResponse(Long id, String name, String description, Double price, Integer stockQuantity, Long shopId , Long categoryId) {
+    public ProductResponse(Long id, String name, String description, BigDecimal price, Integer stockQuantity, Long shopId , Long categoryId) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -49,11 +51,11 @@ public class ProductResponse {
         this.description = description;
     }
 
-    public Double getPrice() {
+    public BigDecimal getPrice() {
         return price;
     }
 
-    public void setPrice(Double price) {
+    public void setPrice(BigDecimal price) {
         this.price = price;
     }
 

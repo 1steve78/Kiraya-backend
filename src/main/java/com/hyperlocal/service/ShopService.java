@@ -59,11 +59,11 @@ public class ShopService {
         return mapToResponse(updatedShop);
     }
 
-    public void deleteShop(Long id) {
-        if (!shopRepository.existsById(id)) {
-            throw new ShopNotFoundException("Shop not found with id: " + id);
-        }
-        shopRepository.deleteById(id);
+    public void deleteShop(Long id, User currentUser) {
+        Shop shop = shopRepository.findById(id)
+                .orElseThrow(() -> new ShopNotFoundException("Shop not found with id: " + id));
+        verifyShopOwnership(shop, currentUser);
+        shopRepository.delete(shop);
     }
 
     // Helper method to keep code clean

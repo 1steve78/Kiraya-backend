@@ -36,10 +36,17 @@ public class CategoryServiceTest {
 
     private Shop shop;
     private Category category;
+    private com.hyperlocal.entity.User user;
 
     @BeforeEach
     void setUp() {
+        user = new com.hyperlocal.entity.User();
+        user.setId(1L);
+        user.setRole(com.hyperlocal.entity.Role.SHOP_OWNER);
+
         shop = new Shop(1L, "Fresh Mart", "123 Main St", "+919876543210");
+        shop.setOwner(user);
+
         category = new Category("Dairy", "Milk products", shop);
         category.setId(10L);
     }
@@ -53,7 +60,7 @@ public class CategoryServiceTest {
         when(shopRepository.findById(1L)).thenReturn(Optional.of(shop));
         when(categoryRepository.save(any(Category.class))).thenReturn(category);
 
-        CategoryResponse response = categoryService.createCategory(1L, request);
+        CategoryResponse response = categoryService.createCategory(1L, request, user);
 
         assertNotNull(response);
         assertEquals(10L, response.getId());
@@ -68,7 +75,7 @@ public class CategoryServiceTest {
 
         when(shopRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(ShopNotFoundException.class, () -> categoryService.createCategory(99L, request));
+        assertThrows(ShopNotFoundException.class, () -> categoryService.createCategory(99L, request, user));
     }
 
     @Test
@@ -91,7 +98,7 @@ public class CategoryServiceTest {
         when(categoryRepository.findById(10L)).thenReturn(Optional.of(category));
         when(categoryRepository.save(any(Category.class))).thenReturn(category);
 
-        CategoryResponse response = categoryService.updateCategory(10L, updateReq);
+        CategoryResponse response = categoryService.updateCategory(10L, updateReq, user);
 
         assertNotNull(response);
         assertEquals("Dairy & Bakery", category.getName());
@@ -99,8 +106,8 @@ public class CategoryServiceTest {
 
     @Test
     void testDeleteCategory_NotFound() {
-        when(categoryRepository.existsById(99L)).thenReturn(false);
+        when(categoryRepository.findById(99L)).thenReturn(Optional.empty());
 
-        assertThrows(CategoryNotFoundException.class, () -> categoryService.deleteCategory(99L));
+        assertThrows(CategoryNotFoundException.class, () -> categoryService.deleteCategory(99L, user));
     }
 }

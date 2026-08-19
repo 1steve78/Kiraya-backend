@@ -1,14 +1,17 @@
 package com.hyperlocal.controller;
 
+import com.hyperlocal.dto.OrderResponse;
 import com.hyperlocal.dto.ShopRequest;
 import com.hyperlocal.dto.ShopResponse;
 import com.hyperlocal.entity.Shop;
 import com.hyperlocal.entity.User;
+import com.hyperlocal.service.OrderService;
 import com.hyperlocal.service.ShopService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,9 +22,11 @@ import java.util.List;
 public class ShopController {
 
     private final ShopService shopService;
+    private final OrderService orderService;
 
-    public ShopController(ShopService shopService) {
+    public ShopController(ShopService shopService, OrderService orderService) {
         this.shopService = shopService;
+        this.orderService = orderService;
     }
 
     @PostMapping
@@ -52,8 +57,19 @@ public class ShopController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteShop(@PathVariable Long id) {
-        shopService.deleteShop(id);
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')")
+    public ResponseEntity<Void> deleteShop(@PathVariable Long id, @AuthenticationPrincipal User currentUser) {
+        shopService.deleteShop(id, currentUser);
         return ResponseEntity.noContent().build();
+    }
+
+    @GetMapping("/{shopId}/orders")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')")
+    public ResponseEntity<List<OrderResponse>> getShopOrders(
+            @PathVariable Long shopId,
+            @AuthenticationPrincipal User currentUser
+    ){
+        List<OrderResponse> responses = orderService.getShopOrders(shopId, currentUser.getEmail());
+        return ResponseEntity.ok(responses);
     }
 }

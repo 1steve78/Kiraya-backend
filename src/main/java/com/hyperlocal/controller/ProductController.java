@@ -43,14 +43,21 @@ public class ProductController {
     }
 
     @PutMapping("/products/{id}")
-    public ProductResponse updateProduct(@PathVariable Long id, @RequestBody ProductRequest request) {
-        return productService.updateProduct(id, request);
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')")
+    public ProductResponse updateProduct(
+            @PathVariable Long id,
+            @Valid @RequestBody ProductRequest request,
+            @AuthenticationPrincipal User currentUser) {
+        return productService.updateProduct(id, request, currentUser);
     }
 
     @DeleteMapping("/products/{id}")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')")
     @ResponseStatus(HttpStatus.NO_CONTENT)
-    public void deleteProduct(@PathVariable Long id) {
-        productService.deleteProduct(id);
+    public void deleteProduct(
+            @PathVariable Long id,
+            @AuthenticationPrincipal User currentUser) {
+        productService.deleteProduct(id, currentUser);
     }
 
     @GetMapping("/shops/{shopId}/products")

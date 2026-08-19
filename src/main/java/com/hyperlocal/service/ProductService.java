@@ -5,6 +5,7 @@ import com.hyperlocal.dto.ProductResponse;
 import com.hyperlocal.entity.*;
 import com.hyperlocal.exception.AccessDeniedException;
 import com.hyperlocal.exception.CategoryNotFoundException;
+import com.hyperlocal.exception.InvalidProductException;
 import com.hyperlocal.exception.ProductNotFoundException;
 import com.hyperlocal.exception.ShopNotFoundException;
 import com.hyperlocal.repository.CategoryRepository;
@@ -38,6 +39,10 @@ public class ProductService {
         Category category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new CategoryNotFoundException("Category not found with id: " + request.getCategoryId()));
 
+        if (!category.getShop().getId().equals(shop.getId())) {
+            throw new InvalidProductException("Category with id " + request.getCategoryId() + " does not belong to shop " + shopId);
+        }
+
         Product product = new Product();
         product.setName(request.getName());
         product.setDescription(request.getDescription());
@@ -56,9 +61,10 @@ public class ProductService {
         return mapToResponse(product);
     }
 
-    public ProductResponse updateProduct(Long productId, ProductRequest request) {
+    public ProductResponse updateProduct(Long productId, ProductRequest request, User currentUser) {
         Product product = productRepository.findById(productId)
                 .orElseThrow(() -> new ProductNotFoundException("Product not found with id: " + productId));
+        verifyShopOwnership(product.getShop(), currentUser);
 
         product.setName(request.getName());
         product.setDescription(request.getDescription());
@@ -68,6 +74,9 @@ public class ProductService {
         if (request.getCategoryId() != null) {
             Category category = categoryRepository.findById(request.getCategoryId())
                     .orElseThrow(() -> new CategoryNotFoundException("Category not found with id: " + request.getCategoryId()));
+            if (!category.getShop().getId().equals(product.getShop().getId())) {
+                throw new InvalidProductException("Category with id " + request.getCategoryId() + " does not belong to shop " + product.getShop().getId());
+            }
             product.setCategory(category);
         }
 
@@ -75,11 +84,11 @@ public class ProductService {
         return mapToResponse(updatedProduct);
     }
 
-    public void deleteProduct(Long productId) {
-        if (!productRepository.existsById(productId)) {
-            throw new ProductNotFoundException("Product not found with id: " + productId);
-        }
-        productRepository.deleteById(productId);
+    public void deleteProduct(Long productId, User currentUser) {
+        Product product = productRepository.findById(productId)
+                .orElseThrow(() -> new ProductNotFoundException("Product not found with id: " + productId));
+        verifyShopOwnership(product.getShop(), currentUser);
+        productRepository.delete(product);
     }
 
     public Page<ProductResponse> getProducts(Long shopId, Long categoryId, String search, Pageable pageable) {

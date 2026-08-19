@@ -3,7 +3,10 @@ package com.hyperlocal.service;
 import com.hyperlocal.dto.CategoryRequest;
 import com.hyperlocal.dto.CategoryResponse;
 import com.hyperlocal.entity.Category;
+import com.hyperlocal.entity.Role;
 import com.hyperlocal.entity.Shop;
+import com.hyperlocal.entity.User;
+import com.hyperlocal.exception.AccessDeniedException;
 import com.hyperlocal.exception.CategoryNotFoundException;
 import com.hyperlocal.exception.ShopNotFoundException;
 import com.hyperlocal.repository.CategoryRepository;
@@ -24,9 +27,10 @@ public class CategoryService {
         this.shopRepository = shopRepository;
     }
 
-    public CategoryResponse createCategory(Long shopId, CategoryRequest request) {
+    public CategoryResponse createCategory(Long shopId, CategoryRequest request, User currentUser) {
         Shop shop = shopRepository.findById(shopId)
                 .orElseThrow(() -> new ShopNotFoundException("Shop not found with id: " + shopId));
+        verifyShopOwnership(shop, currentUser);
 
         Category category = new Category();
         category.setName(request.getName());
@@ -52,9 +56,10 @@ public class CategoryService {
         return mapToResponse(category);
     }
 
-    public CategoryResponse updateCategory(Long categoryId, CategoryRequest request) {
+    public CategoryResponse updateCategory(Long categoryId, CategoryRequest request, User currentUser) {
         Category category = categoryRepository.findById(categoryId)
                 .orElseThrow(() -> new CategoryNotFoundException("Category not found with id: " + categoryId));
+        verifyShopOwnership(category.getShop(), currentUser);
 
         category.setName(request.getName());
         category.setDescription(request.getDescription());
@@ -63,11 +68,11 @@ public class CategoryService {
         return mapToResponse(updatedCategory);
     }
 
-    public void deleteCategory(Long categoryId) {
-        if (!categoryRepository.existsById(categoryId)) {
-            throw new CategoryNotFoundException("Category not found with id: " + categoryId);
-        }
-        categoryRepository.deleteById(categoryId);
+    public void deleteCategory(Long categoryId, User currentUser) {
+        Category category = categoryRepository.findById(categoryId)
+                .orElseThrow(() -> new CategoryNotFoundException("Category not found with id: " + categoryId));
+        verifyShopOwnership(category.getShop(), currentUser);
+        categoryRepository.delete(category);
     }
 
     private CategoryResponse mapToResponse(Category category) {
@@ -77,5 +82,14 @@ public class CategoryService {
         response.setDescription(category.getDescription());
         response.setShopId(category.getShop().getId());
         return response;
+    }
+
+    private void verifyShopOwnership(Shop shop, User currentUser) {
+        if (currentUser.getRole() == Role.ADMIN) {
+            return;
+        }
+        if (shop.getOwner() == null || !shop.getOwner().getId().equals(currentUser.getId())) {
+            throw new AccessDeniedException("You do not have permission to modify categories for this shop.");
+        }
     }
 }
