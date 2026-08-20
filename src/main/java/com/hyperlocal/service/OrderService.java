@@ -1,13 +1,12 @@
 package com.hyperlocal.service;
 
-import com.hyperlocal.dto.CreateOrderRequest;
-import com.hyperlocal.dto.OrderItemRequest;
-import com.hyperlocal.dto.OrderItemResponse;
-import com.hyperlocal.dto.OrderResponse;
+import com.hyperlocal.dto.*;
 import com.hyperlocal.entity.*;
 import com.hyperlocal.exception.*;
 import com.hyperlocal.repository.*;
 import jakarta.transaction.Transactional;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
@@ -22,13 +21,15 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final ShopRepository shopRepository;
     private final UserRepository userRepository;
+    private final OrderStateMachine stateMachine ;
 
     public OrderService(OrderRepository orderRepository, ProductRepository productRepository,
-                        ShopRepository shopRepository, UserRepository userRepository) {
+                        ShopRepository shopRepository, UserRepository userRepository ,OrderStateMachine stateMachine) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.shopRepository = shopRepository;
         this.userRepository = userRepository;
+        this.stateMachine = stateMachine;
     }
 
     @Transactional
@@ -139,6 +140,68 @@ public class OrderService {
                 .stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public OrderResponse updateOrderStatus(Long orderId, OrderStatusUpdateRequest request, String userEmail) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new OrderNotFoundException("Order not found with id: " + orderId));
+
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + userEmail));
+
+        boolean isAdmin = user.getRole() == Role.ADMIN;
+        boolean isShopOwner = user.getRole() == Role.SHOP_OWNER;
+
+        if (!isAdmin) {
+            if (!isShopOwner) {
+                throw new AccessDeniedException("Only shop owners and admins can update statuses.");
+            }
+            if (order.getShop().getOwner() == null || !order.getShop().getOwner().getId().equals(user.getId())) {
+                throw new AccessDeniedException("You do not own the shop for this order.");
+            }
+        }
+
+        if (!stateMachine.canTransition(order.getStatus(), request.getOrderStatus())) {
+            throw new InvalidOrderStateException("Order cannot transition from "
+                    + order.getStatus() + " to " + request.getOrderStatus());
+        }
+
+        if (request.getOrderStatus() == OrderStatus.CANCELLED) {
+            for (OrderItem item : order.getItems()) {
+                Product product = item.getProduct();
+                product.setStockQuantity(product.getStockQuantity() + item.getQuantity());
+                productRepository.save(product);
+            }
+        }
+
+        order.setStatus(request.getOrderStatus());
+        return mapToResponse(orderRepository.save(order));
+    }
+
+    public Page<OrderResponse> getShopOrdersPaginated(
+            Long shopId, OrderStatus status, Pageable pageable, String userEmail) {
+
+        User user = userRepository.findByEmail(userEmail)
+                .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + userEmail));
+
+        if (user.getRole() != Role.ADMIN) {
+            Shop shop = shopRepository.findById(shopId)
+                    .orElseThrow(() -> new ShopNotFoundException("Shop not found with id: " + shopId));
+
+            if (shop.getOwner() == null || !shop.getOwner().getId().equals(user.getId())) {
+                throw new AccessDeniedException("You do not have permission to view this shop's orders.");
+            }
+        }
+
+        Page<Order> ordersPage;
+        if (status != null) {
+            ordersPage = orderRepository.findByShopIdAndStatus(shopId, status, pageable);
+        } else {
+            ordersPage = orderRepository.findByShopId(shopId, pageable);
+        }
+
+        return ordersPage.map(this::mapToResponse);
     }
 
     private OrderResponse mapToResponse(Order order) {

@@ -3,15 +3,18 @@ package com.hyperlocal.controller;
 import com.hyperlocal.dto.OrderResponse;
 import com.hyperlocal.dto.ShopRequest;
 import com.hyperlocal.dto.ShopResponse;
-import com.hyperlocal.entity.Shop;
+import com.hyperlocal.entity.OrderStatus;
 import com.hyperlocal.entity.User;
 import com.hyperlocal.service.OrderService;
 import com.hyperlocal.service.ShopService;
 import jakarta.validation.Valid;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -39,7 +42,6 @@ public class ShopController {
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
-
     @GetMapping
     public ResponseEntity<List<ShopResponse>> getAllShops() {
         return ResponseEntity.ok(shopService.getAllShops());
@@ -51,7 +53,6 @@ public class ShopController {
     }
 
     @PutMapping("/{id}")
-    // And here!
     public ResponseEntity<ShopResponse> updateShop(@PathVariable Long id, @Valid @RequestBody ShopRequest request ,@AuthenticationPrincipal User currentUser) {
         return ResponseEntity.ok(shopService.updateShop(id, request,currentUser));
     }
@@ -65,11 +66,19 @@ public class ShopController {
 
     @GetMapping("/{shopId}/orders")
     @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')")
-    public ResponseEntity<List<OrderResponse>> getShopOrders(
+    public ResponseEntity<Page<OrderResponse>> getShopOrders(
             @PathVariable Long shopId,
+            @RequestParam(required = false) OrderStatus status,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(defaultValue = "createdAt") String sortBy,
+            @RequestParam(defaultValue = "desc") String direction,
             @AuthenticationPrincipal User currentUser
     ){
-        List<OrderResponse> responses = orderService.getShopOrders(shopId, currentUser.getEmail());
+        Sort.Direction sortDirection = direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
+        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
+
+        Page<OrderResponse> responses = orderService.getShopOrdersPaginated(shopId, status, pageable, currentUser.getEmail());
         return ResponseEntity.ok(responses);
     }
 }

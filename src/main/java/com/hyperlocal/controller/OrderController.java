@@ -2,11 +2,13 @@ package com.hyperlocal.controller;
 
 import com.hyperlocal.dto.CreateOrderRequest;
 import com.hyperlocal.dto.OrderResponse;
+import com.hyperlocal.dto.OrderStatusUpdateRequest;
 import com.hyperlocal.entity.User;
 import com.hyperlocal.service.OrderService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -52,6 +54,17 @@ public class OrderController {
             @AuthenticationPrincipal User currentUser) {
 
         OrderResponse response = orderService.cancelOrder(orderId, currentUser.getEmail());
+        return ResponseEntity.ok(response);
+    }
+
+    @PatchMapping("/{orderId}/status")
+    @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')")
+    public ResponseEntity<OrderResponse> updateOrderStatus(
+            @PathVariable Long orderId,
+            @Valid @RequestBody OrderStatusUpdateRequest request,
+            @AuthenticationPrincipal User currentUser) {
+
+        OrderResponse response = orderService.updateOrderStatus(orderId, request, currentUser.getEmail());
         return ResponseEntity.ok(response);
     }
 }

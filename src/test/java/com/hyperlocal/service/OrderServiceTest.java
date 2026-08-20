@@ -3,6 +3,7 @@ package com.hyperlocal.service;
 import com.hyperlocal.dto.CreateOrderRequest;
 import com.hyperlocal.dto.OrderItemRequest;
 import com.hyperlocal.dto.OrderResponse;
+import com.hyperlocal.dto.OrderStatusUpdateRequest;
 import com.hyperlocal.entity.*;
 import com.hyperlocal.exception.*;
 import com.hyperlocal.repository.OrderRepository;
@@ -15,6 +16,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import java.math.BigDecimal;
 import java.util.List;
@@ -38,6 +43,9 @@ public class OrderServiceTest {
 
     @Mock
     private UserRepository userRepository;
+
+    @Mock
+    private OrderStateMachine stateMachine;
 
     @InjectMocks
     private OrderService orderService;
@@ -252,5 +260,146 @@ public class OrderServiceTest {
         when(shopRepository.findById(10L)).thenReturn(Optional.of(shop));
 
         assertThrows(AccessDeniedException.class, () -> orderService.getShopOrders(10L, "other@example.com"));
+    }
+
+    @Test
+    void testUpdateOrderStatus_ShopOwnerSuccess() {
+        Order order = new Order();
+        order.setId(500L);
+        order.setCustomer(customer);
+        order.setShop(shop);
+        order.setStatus(OrderStatus.PENDING);
+
+        OrderStatusUpdateRequest request = new OrderStatusUpdateRequest();
+        request.setOrderStatus(OrderStatus.CONFIRMED);
+
+        when(orderRepository.findById(500L)).thenReturn(Optional.of(order));
+        when(userRepository.findByEmail("bob@example.com")).thenReturn(Optional.of(shopOwner));
+        when(stateMachine.canTransition(OrderStatus.PENDING, OrderStatus.CONFIRMED)).thenReturn(true);
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+
+        OrderResponse response = orderService.updateOrderStatus(500L, request, "bob@example.com");
+
+        assertNotNull(response);
+        assertEquals(OrderStatus.CONFIRMED, response.getStatus());
+        verify(orderRepository).save(order);
+    }
+
+    @Test
+    void testUpdateOrderStatus_InvalidTransitionThrowsException() {
+        Order order = new Order();
+        order.setId(500L);
+        order.setCustomer(customer);
+        order.setShop(shop);
+        order.setStatus(OrderStatus.PENDING);
+
+        OrderStatusUpdateRequest request = new OrderStatusUpdateRequest();
+        request.setOrderStatus(OrderStatus.DELIVERED);
+
+        when(orderRepository.findById(500L)).thenReturn(Optional.of(order));
+        when(userRepository.findByEmail("bob@example.com")).thenReturn(Optional.of(shopOwner));
+        when(stateMachine.canTransition(OrderStatus.PENDING, OrderStatus.DELIVERED)).thenReturn(false);
+
+        assertThrows(InvalidOrderStateException.class,
+                () -> orderService.updateOrderStatus(500L, request, "bob@example.com"));
+    }
+
+    @Test
+    void testUpdateOrderStatus_NotShopOwnerThrowsAccessDenied() {
+        Order order = new Order();
+        order.setId(500L);
+        order.setCustomer(customer);
+        order.setShop(shop);
+        order.setStatus(OrderStatus.PENDING);
+
+        User otherOwner = new User();
+        otherOwner.setId(99L);
+        otherOwner.setEmail("other@example.com");
+        otherOwner.setRole(Role.SHOP_OWNER);
+
+        OrderStatusUpdateRequest request = new OrderStatusUpdateRequest();
+        request.setOrderStatus(OrderStatus.CONFIRMED);
+
+        when(orderRepository.findById(500L)).thenReturn(Optional.of(order));
+        when(userRepository.findByEmail("other@example.com")).thenReturn(Optional.of(otherOwner));
+
+        assertThrows(AccessDeniedException.class,
+                () -> orderService.updateOrderStatus(500L, request, "other@example.com"));
+    }
+
+    @Test
+    void testUpdateOrderStatus_CancelledRestoresStock() {
+        Order order = new Order();
+        order.setId(500L);
+        order.setCustomer(customer);
+        order.setShop(shop);
+        order.setStatus(OrderStatus.PENDING);
+
+        OrderItem item = new OrderItem();
+        item.setId(1L);
+        item.setProduct(product);
+        item.setQuantity(2);
+        item.setUnitPrice(BigDecimal.valueOf(65.0));
+        item.setSubtotal(BigDecimal.valueOf(130.0));
+        order.addItem(item);
+
+        product.setStockQuantity(18);
+
+        OrderStatusUpdateRequest request = new OrderStatusUpdateRequest();
+        request.setOrderStatus(OrderStatus.CANCELLED);
+
+        when(orderRepository.findById(500L)).thenReturn(Optional.of(order));
+        when(userRepository.findByEmail("bob@example.com")).thenReturn(Optional.of(shopOwner));
+        when(stateMachine.canTransition(OrderStatus.PENDING, OrderStatus.CANCELLED)).thenReturn(true);
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+
+        OrderResponse response = orderService.updateOrderStatus(500L, request, "bob@example.com");
+
+        assertNotNull(response);
+        assertEquals(OrderStatus.CANCELLED, response.getStatus());
+        assertEquals(20, product.getStockQuantity());
+        verify(productRepository, times(1)).save(product);
+    }
+
+    @Test
+    void testGetShopOrdersPaginated_Success() {
+        Order order = new Order();
+        order.setId(500L);
+        order.setCustomer(customer);
+        order.setShop(shop);
+        order.setStatus(OrderStatus.PENDING);
+
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Order> page = new PageImpl<>(List.of(order), pageable, 1);
+
+        when(userRepository.findByEmail("bob@example.com")).thenReturn(Optional.of(shopOwner));
+        when(shopRepository.findById(10L)).thenReturn(Optional.of(shop));
+        when(orderRepository.findByShopId(10L, pageable)).thenReturn(page);
+
+        Page<OrderResponse> response = orderService.getShopOrdersPaginated(10L, null, pageable, "bob@example.com");
+
+        assertNotNull(response);
+        assertEquals(1, response.getTotalElements());
+    }
+
+    @Test
+    void testGetShopOrdersPaginated_WithStatusFilter() {
+        Order order = new Order();
+        order.setId(500L);
+        order.setCustomer(customer);
+        order.setShop(shop);
+        order.setStatus(OrderStatus.PENDING);
+
+        Pageable pageable = PageRequest.of(0, 10);
+        Page<Order> page = new PageImpl<>(List.of(order), pageable, 1);
+
+        when(userRepository.findByEmail("bob@example.com")).thenReturn(Optional.of(shopOwner));
+        when(shopRepository.findById(10L)).thenReturn(Optional.of(shop));
+        when(orderRepository.findByShopIdAndStatus(10L, OrderStatus.PENDING, pageable)).thenReturn(page);
+
+        Page<OrderResponse> response = orderService.getShopOrdersPaginated(10L, OrderStatus.PENDING, pageable, "bob@example.com");
+
+        assertNotNull(response);
+        assertEquals(1, response.getTotalElements());
     }
 }
