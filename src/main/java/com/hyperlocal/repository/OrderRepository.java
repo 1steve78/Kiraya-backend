@@ -8,11 +8,14 @@ import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.util.List;
 
-public interface OrderRepository extends JpaRepository<Order,Long> {
+public interface OrderRepository extends JpaRepository<Order, Long> {
 
     List<Order> findByCustomerId(Long customerId);
     List<Order> findByShopId(Long shopId);
 
     Page<Order> findByShopId(Long shopId, Pageable pageable);
-    Page<Order> findByShopIdAndStatus(Long shopId , OrderStatus orderStatus , Pageable pageable);
+    Page<Order> findByShopIdAndStatus(Long shopId, OrderStatus orderStatus, Pageable pageable);
+
+    Page<Order> findByDeliveryPartnerId(Long deliveryPartnerId, Pageable pageable);
+    Page<Order> findByDeliveryPartnerIdAndStatus(Long deliveryPartnerId, OrderStatus status, Pageable pageable);
 }

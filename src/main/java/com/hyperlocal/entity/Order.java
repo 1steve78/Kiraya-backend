@@ -22,6 +22,18 @@ public class Order {
     private User customer;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "delivery_partner_id")
+    private DeliveryPartner deliveryPartner;
+
+    public DeliveryPartner getDeliveryPartner() {
+        return deliveryPartner;
+    }
+
+    public void setDeliveryPartner(DeliveryPartner deliveryPartner) {
+        this.deliveryPartner = deliveryPartner;
+    }
+
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "shop_id",nullable = false)
     private Shop shop;
 

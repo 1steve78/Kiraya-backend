@@ -58,6 +58,16 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
     }
 
+    @ExceptionHandler(DeliveryPartnerNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleDeliveryPartnerNotFoundException(DeliveryPartnerNotFoundException ex) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.NOT_FOUND.value(),
+                ex.getMessage(),
+                null
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
+    }
+
     @ExceptionHandler(InvalidOrderStateException.class)
     public ResponseEntity<ErrorResponse> handleInvalidOrderStateException(InvalidOrderStateException ex) {
         ErrorResponse errorResponse = new ErrorResponse(
