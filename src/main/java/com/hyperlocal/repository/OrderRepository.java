@@ -5,6 +5,8 @@ import com.hyperlocal.entity.OrderStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
@@ -18,4 +20,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     Page<Order> findByDeliveryPartnerId(Long deliveryPartnerId, Pageable pageable);
     Page<Order> findByDeliveryPartnerIdAndStatus(Long deliveryPartnerId, OrderStatus status, Pageable pageable);
+
+    @Query("SELECT COUNT(o) FROM Order o WHERE o.deliveryPartner.id = :partnerId AND o.status IN :statuses")
+    int countActiveOrdersForPartner(@Param("partnerId") Long partnerId, @Param("statuses") List<OrderStatus> statuses);
 }

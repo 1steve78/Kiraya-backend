@@ -4,6 +4,7 @@ import com.hyperlocal.dto.CreateOrderRequest;
 import com.hyperlocal.dto.OrderResponse;
 import com.hyperlocal.dto.OrderStatusUpdateRequest;
 import com.hyperlocal.entity.User;
+import com.hyperlocal.service.DispatchService;
 import com.hyperlocal.service.OrderService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -19,9 +20,12 @@ import java.util.List;
 public class OrderController {
 
     private final OrderService orderService;
+    private final DispatchService dispatchService;
 
-    public OrderController(OrderService orderService) {
+    public OrderController(OrderService orderService , DispatchService dispatchService)
+    {
         this.orderService = orderService;
+        this.dispatchService = dispatchService;
     }
 
     @PostMapping
