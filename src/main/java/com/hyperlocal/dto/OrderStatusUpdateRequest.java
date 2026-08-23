@@ -1,6 +1,6 @@
 package com.hyperlocal.dto;
 
-import com.hyperlocal.entity.OrderStatus;
+import com.hyperlocal.model.OrderStatus;
 import jakarta.validation.constraints.NotNull;
 
 public class OrderStatusUpdateRequest {

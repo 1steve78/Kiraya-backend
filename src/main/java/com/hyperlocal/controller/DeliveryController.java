@@ -4,7 +4,7 @@ import com.hyperlocal.dto.AssignDeliveryRequest;
 import com.hyperlocal.dto.AvailabilityRequest;
 import com.hyperlocal.dto.OrderResponse;
 import com.hyperlocal.dto.OrderStatusUpdateRequest;
-import com.hyperlocal.entity.OrderStatus;
+import com.hyperlocal.model.OrderStatus;
 import com.hyperlocal.entity.User;
 import com.hyperlocal.service.DeliveryService;
 import jakarta.validation.Valid;

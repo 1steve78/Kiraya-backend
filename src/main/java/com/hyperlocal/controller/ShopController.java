@@ -3,7 +3,7 @@ package com.hyperlocal.controller;
 import com.hyperlocal.dto.OrderResponse;
 import com.hyperlocal.dto.ShopRequest;
 import com.hyperlocal.dto.ShopResponse;
-import com.hyperlocal.entity.OrderStatus;
+import com.hyperlocal.model.OrderStatus;
 import com.hyperlocal.entity.User;
 import com.hyperlocal.service.OrderService;
 import com.hyperlocal.service.ShopService;

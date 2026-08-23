@@ -1,7 +1,7 @@
 package com.hyperlocal.repository;
 
 import com.hyperlocal.entity.Order;
-import com.hyperlocal.entity.OrderStatus;
+import com.hyperlocal.model.OrderStatus;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;

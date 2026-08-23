@@ -1,0 +1,36 @@
+spring:
+  application:
+    name: hyperlocal-app
+
+  # Database Connection
+  datasource:
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/hyperlocal}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:gsoc_2027}
+    driver-class-name: org.postgresql.Driver
+
+  # Hibernate / JPA Configuration
+  jpa:
+    hibernate:
+      ddl-auto: ${JPA_DDL_AUTO:update}
+    show-sql: ${SHOW_SQL:true}
+    properties:
+      hibernate:
+        format_sql: true
+
+# Security & JWT Configuration
+application:
+  security:
+    jwt:
+      secret_key: ${JWT_SECRET_KEY:404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970}
+      expiration: ${JWT_EXPIRATION:86400000} # 24 hours in milliseconds
+
+# Dispatch Configuration
+dispatch:
+  max-radius-km: 5.0
+  max-routing-candidates: 10
+
+# Google Maps API Configuration
+google:
+  maps:
+    api-key: ${GOOGLE_MAPS_API_KEY:mock-key-for-local}

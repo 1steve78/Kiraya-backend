@@ -2,7 +2,7 @@ package com.hyperlocal.service;
 
 import com.hyperlocal.dto.ShopRequest;
 import com.hyperlocal.dto.ShopResponse;
-import com.hyperlocal.entity.Role;
+import com.hyperlocal.model.Role;
 import com.hyperlocal.entity.Shop;
 import com.hyperlocal.entity.User;
 import com.hyperlocal.exception.ShopNotFoundException;

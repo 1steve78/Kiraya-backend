@@ -42,7 +42,7 @@ public class CategoryServiceTest {
     void setUp() {
         user = new com.hyperlocal.entity.User();
         user.setId(1L);
-        user.setRole(com.hyperlocal.entity.Role.SHOP_OWNER);
+        user.setRole(com.hyperlocal.model.Role.SHOP_OWNER);
 
         shop = new Shop(1L, "Fresh Mart", "123 Main St", "+919876543210");
         shop.setOwner(user);

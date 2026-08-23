@@ -5,6 +5,8 @@ import com.hyperlocal.dto.OrderItemRequest;
 import com.hyperlocal.dto.OrderResponse;
 import com.hyperlocal.dto.OrderStatusUpdateRequest;
 import com.hyperlocal.entity.*;
+import com.hyperlocal.model.OrderStatus;
+import com.hyperlocal.model.Role;
 import com.hyperlocal.exception.*;
 import com.hyperlocal.repository.OrderRepository;
 import com.hyperlocal.repository.ProductRepository;

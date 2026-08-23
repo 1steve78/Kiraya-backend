@@ -1,5 +1,6 @@
 package com.hyperlocal.entity;
 
+import com.hyperlocal.model.Location;
 import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
@@ -24,6 +25,19 @@ public class DeliveryPartner {
 
     @Column(nullable = false)
     private boolean isAvailable = false;
+
+    @Column(name = "latitude")
+    private Double latitude;
+
+    @Column(name = "longitude")
+    private Double longitude;
+
+    public Location getLocation() {
+        if (latitude != null && longitude != null) {
+            return new Location(latitude, longitude);
+        }
+        return null;
+    }
 
     private LocalDateTime createdAt = LocalDateTime.now();
 

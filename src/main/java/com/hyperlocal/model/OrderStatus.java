@@ -1,4 +1,4 @@
-package com.hyperlocal.entity;
+package com.hyperlocal.model;
 
 public enum OrderStatus {
     PENDING,

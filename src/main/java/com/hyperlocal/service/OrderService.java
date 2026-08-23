@@ -2,6 +2,8 @@ package com.hyperlocal.service;
 
 import com.hyperlocal.dto.*;
 import com.hyperlocal.entity.*;
+import com.hyperlocal.model.OrderStatus;
+import com.hyperlocal.model.Role;
 import com.hyperlocal.exception.*;
 import com.hyperlocal.repository.*;
 import jakarta.transaction.Transactional;

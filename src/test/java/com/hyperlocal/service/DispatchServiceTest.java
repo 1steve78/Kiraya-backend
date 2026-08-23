@@ -1,9 +1,9 @@
 package com.hyperlocal.service;
 
-import com.hyperlocal.dto.DistanceResult;
+import com.hyperlocal.model.DistanceResult;
 import com.hyperlocal.entity.DeliveryPartner;
 import com.hyperlocal.entity.Order;
-import com.hyperlocal.entity.OrderStatus;
+import com.hyperlocal.model.OrderStatus;
 import com.hyperlocal.entity.Shop;
 import com.hyperlocal.entity.User;
 import com.hyperlocal.repository.DeliveryPartnerRepository;

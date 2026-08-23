@@ -3,6 +3,7 @@ package com.hyperlocal.service;
 import com.hyperlocal.dto.ProductRequest;
 import com.hyperlocal.dto.ProductResponse;
 import com.hyperlocal.entity.*;
+import com.hyperlocal.model.Role;
 import com.hyperlocal.exception.AccessDeniedException;
 import com.hyperlocal.exception.CategoryNotFoundException;
 import com.hyperlocal.exception.InvalidProductException;

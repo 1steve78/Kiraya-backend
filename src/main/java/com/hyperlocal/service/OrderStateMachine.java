@@ -1,6 +1,6 @@
 package com.hyperlocal.service;
 
-import com.hyperlocal.entity.OrderStatus;
+import com.hyperlocal.model.OrderStatus;
 import org.springframework.stereotype.Component;
 
 import java.util.EnumSet;

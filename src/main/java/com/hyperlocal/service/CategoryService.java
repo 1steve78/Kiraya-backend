@@ -3,7 +3,7 @@ package com.hyperlocal.service;
 import com.hyperlocal.dto.CategoryRequest;
 import com.hyperlocal.dto.CategoryResponse;
 import com.hyperlocal.entity.Category;
-import com.hyperlocal.entity.Role;
+import com.hyperlocal.model.Role;
 import com.hyperlocal.entity.Shop;
 import com.hyperlocal.entity.User;
 import com.hyperlocal.exception.AccessDeniedException;

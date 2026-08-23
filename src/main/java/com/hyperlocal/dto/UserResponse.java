@@ -1,6 +1,6 @@
 package com.hyperlocal.dto;
 
-import com.hyperlocal.entity.Role;
+import com.hyperlocal.model.Role;
 
 public class UserResponse {
 

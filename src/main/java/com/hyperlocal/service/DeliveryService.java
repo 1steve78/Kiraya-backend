@@ -6,7 +6,7 @@ import com.hyperlocal.dto.OrderItemResponse;
 import com.hyperlocal.dto.OrderResponse;
 import com.hyperlocal.entity.DeliveryPartner;
 import com.hyperlocal.entity.Order;
-import com.hyperlocal.entity.OrderStatus;
+import com.hyperlocal.model.OrderStatus;
 import com.hyperlocal.exception.AccessDeniedException;
 import com.hyperlocal.exception.DeliveryPartnerNotFoundException;
 import com.hyperlocal.exception.InvalidOrderStateException;

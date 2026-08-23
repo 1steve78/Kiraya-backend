@@ -1,5 +1,6 @@
 package com.hyperlocal.entity;
 
+import com.hyperlocal.model.OrderStatus;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;

@@ -2,7 +2,7 @@ package com.hyperlocal.service;
 
 import com.hyperlocal.dto.RegisterRequest;
 import com.hyperlocal.dto.UserResponse;
-import com.hyperlocal.entity.Role;
+import com.hyperlocal.model.Role;
 import com.hyperlocal.entity.User;
 import com.hyperlocal.exception.UserAlreadyExistsException;
 import com.hyperlocal.repository.UserRepository;
