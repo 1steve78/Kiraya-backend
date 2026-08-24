@@ -1,6 +1,9 @@
 package com.hyperlocal.service;
 
+import com.hyperlocal.entity.User;
+import com.hyperlocal.model.UserStatus;
 import com.hyperlocal.repository.UserRepository;
+import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -17,7 +20,13 @@ public class CustomUserDetailsService  implements UserDetailsService {
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException{
-        return  userRepository.findByEmail(username)
+        User user =   userRepository.findByEmail(username)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email : "+ username));
+
+        if(user.getStatus() == UserStatus.SUSPENDED){
+            throw new DisabledException("Account has been suspended by the administrator");
+        }
+
+        return  user;
     }
 }

@@ -1,6 +1,7 @@
 package com.hyperlocal.entity;
 
 import com.hyperlocal.model.Location;
+import com.hyperlocal.model.ShopStatus;
 import jakarta.persistence.*;
 
 import java.util.ArrayList;
@@ -22,6 +23,8 @@ public class Shop {
     private User owner;
 
 
+
+
     @OneToMany(mappedBy = "shop", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<Product> products = new ArrayList<>();
 
@@ -34,6 +37,9 @@ public class Shop {
     @Column(name = "longitude")
     private Double longitude;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private ShopStatus status = ShopStatus.PENDING_APPROVAL;
 
     public Location getLocation() {
         if (latitude != null && longitude != null) {
@@ -72,5 +78,12 @@ public class Shop {
     public void setProducts(List<Product> products) { this.products = products; }
     public List<Category> getCategories() { return categories; }
     public void setCategories(List<Category> categories) { this.categories = categories; }
+    public ShopStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(ShopStatus status) {
+        this.status = status;
+    }
 
 }

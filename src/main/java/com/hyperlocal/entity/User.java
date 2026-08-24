@@ -1,6 +1,7 @@
 package com.hyperlocal.entity;
 
 import com.hyperlocal.model.Role;
+import com.hyperlocal.model.UserStatus;
 import jakarta.persistence.*;
 import org.hibernate.annotations.CreationTimestamp;
 import org.springframework.security.core.GrantedAuthority;
@@ -19,6 +20,8 @@ public class User implements UserDetails {
     @GeneratedValue(strategy =  GenerationType.IDENTITY)
     private  Long id;
 
+
+
     @Column(nullable = false)
     private  String name;
 
@@ -35,6 +38,9 @@ public class User implements UserDetails {
     @CreationTimestamp
     private LocalDateTime createdAt;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserStatus status = UserStatus.ACTIVE;
 
     @Override
     public Collection<?extends GrantedAuthority> getAuthorities(){
@@ -59,7 +65,9 @@ public class User implements UserDetails {
     public boolean isCredentialsNonExpired() { return true; }
 
     @Override
-    public boolean isEnabled() { return true; }
+    public boolean isEnabled() {
+        return status == UserStatus.ACTIVE;
+    }
 
     public String getName() {
         return name;
@@ -107,5 +115,13 @@ public class User implements UserDetails {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public UserStatus getStatus() {
+        return status;
+    }
+
+    public void setStatus(UserStatus status) {
+        this.status = status;
     }
 }

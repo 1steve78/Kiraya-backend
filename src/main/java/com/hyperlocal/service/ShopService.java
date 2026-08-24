@@ -3,6 +3,7 @@ package com.hyperlocal.service;
 import com.hyperlocal.dto.ShopRequest;
 import com.hyperlocal.dto.ShopResponse;
 import com.hyperlocal.model.Role;
+import com.hyperlocal.model.ShopStatus;
 import com.hyperlocal.entity.Shop;
 import com.hyperlocal.entity.User;
 import com.hyperlocal.exception.ShopNotFoundException;
@@ -23,7 +24,7 @@ public class ShopService {
     }
 
     public List<ShopResponse> getAllShops() {
-        return shopRepository.findAll().stream()
+        return shopRepository.findByStatus(ShopStatus.APPROVED).stream()
                 .map(this::mapToResponse)
                 .collect(Collectors.toList());
     }
@@ -31,6 +32,11 @@ public class ShopService {
     public ShopResponse getShopById(Long id) {
         Shop shop = shopRepository.findById(id)
                 .orElseThrow(() -> new ShopNotFoundException("Shop not found with id: " + id));
+
+        if (shop.getStatus() != ShopStatus.APPROVED) {
+            throw new ShopNotFoundException("Shop not found or currently unavailable");
+        }
+
         return mapToResponse(shop);
     }
 
