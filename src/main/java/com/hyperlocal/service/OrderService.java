@@ -23,15 +23,18 @@ public class OrderService {
     private final ProductRepository productRepository;
     private final ShopRepository shopRepository;
     private final UserRepository userRepository;
-    private final OrderStateMachine stateMachine ;
+    private final OrderStateMachine stateMachine;
+    private final OrderEventPublisher orderEventPublisher;
 
     public OrderService(OrderRepository orderRepository, ProductRepository productRepository,
-                        ShopRepository shopRepository, UserRepository userRepository ,OrderStateMachine stateMachine) {
+                        ShopRepository shopRepository, UserRepository userRepository,
+                        OrderStateMachine stateMachine, OrderEventPublisher orderEventPublisher) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.shopRepository = shopRepository;
         this.userRepository = userRepository;
         this.stateMachine = stateMachine;
+        this.orderEventPublisher = orderEventPublisher;
     }
 
     @Transactional
@@ -178,7 +181,9 @@ public class OrderService {
         }
 
         order.setStatus(request.getOrderStatus());
-        return mapToResponse(orderRepository.save(order));
+        Order savedOrder = orderRepository.save(order);
+        orderEventPublisher.publishOrderStatusChanged(savedOrder);
+        return mapToResponse(savedOrder);
     }
 
     public Page<OrderResponse> getShopOrdersPaginated(

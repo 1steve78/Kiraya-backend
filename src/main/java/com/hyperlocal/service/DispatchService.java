@@ -31,6 +31,7 @@ public class DispatchService {
     private final OrderRepository orderRepository;
     private final DeliveryPartnerRepository deliveryPartnerRepository;
     private final DistanceService distanceService;
+    private final OrderEventPublisher orderEventPublisher;
 
     @Value("${dispatch.max-radius-km:5.0}")
     private double maxRadiusKm = 5.0;
@@ -45,10 +46,12 @@ public class DispatchService {
 
     public DispatchService(OrderRepository orderRepository,
                            DeliveryPartnerRepository deliveryPartnerRepository,
-                           DistanceService distanceService) {
+                           DistanceService distanceService,
+                           OrderEventPublisher orderEventPublisher) {
         this.orderRepository = orderRepository;
         this.deliveryPartnerRepository = deliveryPartnerRepository;
         this.distanceService = distanceService;
+        this.orderEventPublisher = orderEventPublisher;
     }
 
     @Transactional
@@ -67,7 +70,9 @@ public class DispatchService {
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "No suitable delivery partner available"));
 
         order.setDeliveryPartner(bestPartner);
-        orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+        orderEventPublisher.publishOrderAssigned(savedOrder);
+       
     }
 
     public Optional<DeliveryPartner> findBestPartner(Order order) {

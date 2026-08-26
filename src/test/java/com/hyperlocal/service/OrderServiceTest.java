@@ -49,6 +49,9 @@ public class OrderServiceTest {
     @Mock
     private OrderStateMachine stateMachine;
 
+    @Mock
+    private OrderEventPublisher orderEventPublisher;
+
     @InjectMocks
     private OrderService orderService;
 

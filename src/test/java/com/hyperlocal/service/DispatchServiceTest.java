@@ -39,6 +39,9 @@ class DispatchServiceTest {
     @Mock
     private DistanceService distanceService;
 
+    @Mock
+    private OrderEventPublisher orderEventPublisher;
+
     @InjectMocks
     private DispatchService dispatchService;
 

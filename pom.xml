@@ -96,6 +96,11 @@
       <groupId>me.paulschwarz</groupId>
       <artifactId>springboot3-dotenv</artifactId>
     </dependency>
+
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-websocket</artifactId>
+    </dependency>
   </dependencies>
 
   <dependencyManagement>
