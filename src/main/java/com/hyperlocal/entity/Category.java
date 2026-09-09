@@ -17,7 +17,7 @@ public class Category {
     private  String description ;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "shop_id", nullable = false)
+    @JoinColumn(name = "shop_id")
     private  Shop shop;
 
     @OneToMany(mappedBy = "category" , cascade =  CascadeType.ALL , orphanRemoval = true)

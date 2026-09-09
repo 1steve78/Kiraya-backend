@@ -18,4 +18,6 @@ public interface ShopRepository extends JpaRepository<Shop, Long> {
     List<Shop> findByStatus(ShopStatus status);
     Page<Shop> findByStatus(ShopStatus status, Pageable pageable);
     long countByStatus(ShopStatus status);
+
+    java.util.Optional<Shop> findFirstByOwnerId(Long ownerId);
 }

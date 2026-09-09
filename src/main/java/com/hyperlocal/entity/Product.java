@@ -24,11 +24,11 @@ public class Product {
     private Integer stockQuantity;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "shop_id", nullable = false)
+    @JoinColumn(name = "shop_id")
     private Shop shop;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "category_id" , nullable = false)
+    @JoinColumn(name = "category_id")
     private  Category category ;
 
     public Product() {

@@ -8,9 +8,14 @@ import java.util.List;
 public class OrderResponse {
     private Long id;
     private Long shopId;
+    private String shopName;
+    private Long customerId;
+    private String customerName;
+    private String customerPhone;
     private OrderStatus status;
     private BigDecimal totalAmount;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
     private List<OrderItemResponse> items;
 
     public Long getId() {
@@ -27,6 +32,38 @@ public class OrderResponse {
 
     public void setShopId(Long shopId) {
         this.shopId = shopId;
+    }
+
+    public String getShopName() {
+        return shopName;
+    }
+
+    public void setShopName(String shopName) {
+        this.shopName = shopName;
+    }
+
+    public Long getCustomerId() {
+        return customerId;
+    }
+
+    public void setCustomerId(Long customerId) {
+        this.customerId = customerId;
+    }
+
+    public String getCustomerName() {
+        return customerName;
+    }
+
+    public void setCustomerName(String customerName) {
+        this.customerName = customerName;
+    }
+
+    public String getCustomerPhone() {
+        return customerPhone;
+    }
+
+    public void setCustomerPhone(String customerPhone) {
+        this.customerPhone = customerPhone;
     }
 
     public OrderStatus getStatus() {
@@ -51,6 +88,14 @@ public class OrderResponse {
 
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
+    }
+
+    public LocalDateTime getUpdatedAt() {
+        return updatedAt;
+    }
+
+    public void setUpdatedAt(LocalDateTime updatedAt) {
+        this.updatedAt = updatedAt;
     }
 
     public List<OrderItemResponse> getItems() {

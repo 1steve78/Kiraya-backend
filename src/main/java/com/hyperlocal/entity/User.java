@@ -39,7 +39,7 @@ public class User implements UserDetails {
     private LocalDateTime createdAt;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "varchar(255) default 'ACTIVE'")
     private UserStatus status = UserStatus.ACTIVE;
 
     @Override

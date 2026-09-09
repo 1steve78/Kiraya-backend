@@ -19,7 +19,7 @@ public class Shop {
     private  String phone;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "owner_id", nullable = false)
+    @JoinColumn(name = "owner_id")
     private User owner;
 
 
@@ -38,7 +38,7 @@ public class Shop {
     private Double longitude;
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "varchar(255) default 'PENDING_APPROVAL'")
     private ShopStatus status = ShopStatus.PENDING_APPROVAL;
 
     public Location getLocation() {

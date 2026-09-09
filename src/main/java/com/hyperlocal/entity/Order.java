@@ -19,7 +19,7 @@ public class Order {
     private  Long id;
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "customer_id",nullable = false)
+    @JoinColumn(name = "customer_id")
     private User customer;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -35,21 +35,21 @@ public class Order {
     }
 
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "shop_id",nullable = false)
+    @JoinColumn(name = "shop_id")
     private Shop shop;
 
     @OneToMany(mappedBy = "order" , cascade = CascadeType.ALL , orphanRemoval = true)
     private List<OrderItem> items = new ArrayList<>();
 
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "varchar(255) default 'PENDING'")
     private  OrderStatus status = OrderStatus.PENDING;
 
-    @Column(nullable = false,precision = 10,scale = 2)
+    @Column(precision = 10,scale = 2)
     private BigDecimal totalAmount;
 
     @CreationTimestamp
-    @Column(nullable = false)
+    @Column
     private LocalDateTime createdAt;
 
     @UpdateTimestamp

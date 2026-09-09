@@ -1,5 +1,6 @@
 package com.hyperlocal.service;
 
+import com.hyperlocal.dto.ShopCreatedResponse;
 import com.hyperlocal.dto.ShopRequest;
 import com.hyperlocal.dto.ShopResponse;
 import com.hyperlocal.model.Role;
@@ -8,19 +9,24 @@ import com.hyperlocal.entity.Shop;
 import com.hyperlocal.entity.User;
 import com.hyperlocal.exception.ShopNotFoundException;
 import com.hyperlocal.repository.ShopRepository;
+import com.hyperlocal.security.JwtService;
 import org.springframework.stereotype.Service;
 import com.hyperlocal.exception.AccessDeniedException;
 
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 public class ShopService {
 
     private final ShopRepository shopRepository;
+    private final JwtService jwtService;
 
-    public ShopService(ShopRepository shopRepository) {
+    public ShopService(ShopRepository shopRepository, JwtService jwtService) {
         this.shopRepository = shopRepository;
+        this.jwtService = jwtService;
     }
 
     public List<ShopResponse> getAllShops() {
@@ -40,7 +46,7 @@ public class ShopService {
         return mapToResponse(shop);
     }
 
-    public ShopResponse createShop(ShopRequest request, User currentUser) {
+    public ShopCreatedResponse createShop(ShopRequest request, User currentUser) {
         Shop shop = new Shop();
         shop.setName(request.getName());
         shop.setAddress(request.getAddress());
@@ -48,7 +54,16 @@ public class ShopService {
 
         shop.setOwner(currentUser);
         Shop savedShop = shopRepository.save(shop);
-        return mapToResponse(savedShop);
+        ShopResponse shopResponse = mapToResponse(savedShop);
+
+        // Re-issue a fresh token that now contains the new shopId
+        Map<String, Object> extraClaims = new HashMap<>();
+        extraClaims.put("role", currentUser.getRole().name());
+        extraClaims.put("name", currentUser.getName());
+        extraClaims.put("shopId", savedShop.getId());
+        String freshToken = jwtService.generateToken(extraClaims, currentUser);
+
+        return new ShopCreatedResponse(freshToken, shopResponse);
     }
 
     public ShopResponse updateShop(Long id, ShopRequest request, User currentUser) {

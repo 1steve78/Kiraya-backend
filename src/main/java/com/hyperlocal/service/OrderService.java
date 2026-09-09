@@ -80,6 +80,7 @@ public class OrderService {
 
         order.setTotalAmount(totalAmount);
         Order savedOrder = orderRepository.save(order);
+        orderEventPublisher.publishNewOrder(savedOrder);
         return mapToResponse(savedOrder);
     }
 
@@ -125,7 +126,9 @@ public class OrderService {
             productRepository.save(product);
         }
 
-        return mapToResponse(orderRepository.save(order));
+        Order savedOrder = orderRepository.save(order);
+        orderEventPublisher.publishOrderCancelled(savedOrder);
+        return mapToResponse(savedOrder);
     }
 
     public List<OrderResponse> getShopOrders(Long shopId, String userEmail) {
@@ -215,9 +218,15 @@ public class OrderService {
         OrderResponse response = new OrderResponse();
         response.setId(order.getId());
         response.setShopId(order.getShop().getId());
+        response.setShopName(order.getShop().getName());
+        response.setCustomerId(order.getCustomer().getId());
+        response.setCustomerName(order.getCustomer().getName());
+        // Phone is not stored on User — leave null (can be added later if User entity gains phone field)
+        response.setCustomerPhone(null);
         response.setStatus(order.getStatus());
         response.setTotalAmount(order.getTotalAmount());
         response.setCreatedAt(order.getCreatedAt());
+        response.setUpdatedAt(order.getUpdatedAt());
 
         if (order.getItems() != null) {
             response.setItems(order.getItems().stream().map(item -> {

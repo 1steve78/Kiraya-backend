@@ -14,16 +14,16 @@ public class DeliveryPartner {
     private Long id;
 
     @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "user_id", nullable = false, unique = true)
+    @JoinColumn(name = "user_id", unique = true)
     private User user;
 
-    @Column(nullable = false)
+    @Column
     private String vehicleType; // e.g., BIKE, SCOOTER
 
-    @Column(nullable = false)
+    @Column
     private String vehicleNumber;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "boolean default false")
     private boolean isAvailable = false;
 
     @Column(name = "latitude")

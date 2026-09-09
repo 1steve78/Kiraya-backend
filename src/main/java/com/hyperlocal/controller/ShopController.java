@@ -1,17 +1,13 @@
 package com.hyperlocal.controller;
 
 import com.hyperlocal.dto.OrderResponse;
+import com.hyperlocal.dto.ShopCreatedResponse;
 import com.hyperlocal.dto.ShopRequest;
 import com.hyperlocal.dto.ShopResponse;
-import com.hyperlocal.model.OrderStatus;
 import com.hyperlocal.entity.User;
 import com.hyperlocal.service.OrderService;
 import com.hyperlocal.service.ShopService;
 import jakarta.validation.Valid;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -34,11 +30,11 @@ public class ShopController {
 
     @PostMapping
     @PreAuthorize("hasAnyRole('SHOP_OWNER','ADMIN')")
-    public ResponseEntity<ShopResponse> createShop(
+    public ResponseEntity<ShopCreatedResponse> createShop(
             @Valid @RequestBody ShopRequest request,
             @AuthenticationPrincipal User currentUser
     ){
-        ShopResponse response = shopService.createShop(request,currentUser);
+        ShopCreatedResponse response = shopService.createShop(request, currentUser);
         return new ResponseEntity<>(response, HttpStatus.CREATED);
     }
 
@@ -66,19 +62,11 @@ public class ShopController {
 
     @GetMapping("/{shopId}/orders")
     @PreAuthorize("hasAnyRole('SHOP_OWNER', 'ADMIN')")
-    public ResponseEntity<Page<OrderResponse>> getShopOrders(
+    public ResponseEntity<List<OrderResponse>> getShopOrders(
             @PathVariable Long shopId,
-            @RequestParam(required = false) OrderStatus status,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(defaultValue = "createdAt") String sortBy,
-            @RequestParam(defaultValue = "desc") String direction,
             @AuthenticationPrincipal User currentUser
     ){
-        Sort.Direction sortDirection = direction.equalsIgnoreCase("asc") ? Sort.Direction.ASC : Sort.Direction.DESC;
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sortDirection, sortBy));
-
-        Page<OrderResponse> responses = orderService.getShopOrdersPaginated(shopId, status, pageable, currentUser.getEmail());
+        List<OrderResponse> responses = orderService.getShopOrders(shopId, currentUser.getEmail());
         return ResponseEntity.ok(responses);
     }
 }
