@@ -276,7 +276,7 @@ public class OrderServiceTest {
         order.setStatus(OrderStatus.PENDING);
 
         OrderStatusUpdateRequest request = new OrderStatusUpdateRequest();
-        request.setOrderStatus(OrderStatus.CONFIRMED);
+        request.setStatus(OrderStatus.CONFIRMED);
 
         when(orderRepository.findById(500L)).thenReturn(Optional.of(order));
         when(userRepository.findByEmail("bob@example.com")).thenReturn(Optional.of(shopOwner));
@@ -299,7 +299,7 @@ public class OrderServiceTest {
         order.setStatus(OrderStatus.PENDING);
 
         OrderStatusUpdateRequest request = new OrderStatusUpdateRequest();
-        request.setOrderStatus(OrderStatus.DELIVERED);
+        request.setStatus(OrderStatus.DELIVERED);
 
         when(orderRepository.findById(500L)).thenReturn(Optional.of(order));
         when(userRepository.findByEmail("bob@example.com")).thenReturn(Optional.of(shopOwner));
@@ -323,7 +323,7 @@ public class OrderServiceTest {
         otherOwner.setRole(Role.SHOP_OWNER);
 
         OrderStatusUpdateRequest request = new OrderStatusUpdateRequest();
-        request.setOrderStatus(OrderStatus.CONFIRMED);
+        request.setStatus(OrderStatus.CONFIRMED);
 
         when(orderRepository.findById(500L)).thenReturn(Optional.of(order));
         when(userRepository.findByEmail("other@example.com")).thenReturn(Optional.of(otherOwner));
@@ -351,7 +351,7 @@ public class OrderServiceTest {
         product.setStockQuantity(18);
 
         OrderStatusUpdateRequest request = new OrderStatusUpdateRequest();
-        request.setOrderStatus(OrderStatus.CANCELLED);
+        request.setStatus(OrderStatus.CANCELLED);
 
         when(orderRepository.findById(500L)).thenReturn(Optional.of(order));
         when(userRepository.findByEmail("bob@example.com")).thenReturn(Optional.of(shopOwner));

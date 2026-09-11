@@ -29,6 +29,9 @@ public class ShopServiceTest {
     @Mock
     private ShopRepository shopRepository;
 
+    @Mock
+    private com.hyperlocal.security.JwtService jwtService;
+
     @InjectMocks
     private ShopService shopService;
 
@@ -118,12 +121,13 @@ public class ShopServiceTest {
         saved.setStatus(ShopStatus.PENDING_APPROVAL);
 
         when(shopRepository.save(any(Shop.class))).thenReturn(saved);
+        when(jwtService.generateToken(any(), any(User.class))).thenReturn("mock-jwt-token");
 
-        ShopResponse response = shopService.createShop(request, owner);
+        com.hyperlocal.dto.ShopCreatedResponse response = shopService.createShop(request, owner);
 
         assertNotNull(response);
-        assertEquals(5L, response.getId());
-        assertEquals("New Store", response.getName());
+        assertEquals(5L, response.getShop().getId());
+        assertEquals("New Store", response.getShop().getName());
     }
 
     @Test

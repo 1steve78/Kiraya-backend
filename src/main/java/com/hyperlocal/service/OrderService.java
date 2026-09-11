@@ -16,8 +16,13 @@ import java.math.BigDecimal;
 import java.util.List;
 import java.util.stream.Collectors;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Service
 public class OrderService {
+
+    private static final Logger log = LoggerFactory.getLogger(OrderService.class);
 
     private final OrderRepository orderRepository;
     private final ProductRepository productRepository;
@@ -25,16 +30,19 @@ public class OrderService {
     private final UserRepository userRepository;
     private final OrderStateMachine stateMachine;
     private final OrderEventPublisher orderEventPublisher;
+    private final DispatchService dispatchService;
 
     public OrderService(OrderRepository orderRepository, ProductRepository productRepository,
                         ShopRepository shopRepository, UserRepository userRepository,
-                        OrderStateMachine stateMachine, OrderEventPublisher orderEventPublisher) {
+                        OrderStateMachine stateMachine, OrderEventPublisher orderEventPublisher,
+                        DispatchService dispatchService) {
         this.orderRepository = orderRepository;
         this.productRepository = productRepository;
         this.shopRepository = shopRepository;
         this.userRepository = userRepository;
         this.stateMachine = stateMachine;
         this.orderEventPublisher = orderEventPublisher;
+        this.dispatchService = dispatchService;
     }
 
     @Transactional
@@ -186,6 +194,17 @@ public class OrderService {
         order.setStatus(request.getOrderStatus());
         Order savedOrder = orderRepository.save(order);
         orderEventPublisher.publishOrderStatusChanged(savedOrder);
+        
+        if (request.getOrderStatus() == OrderStatus.READY_FOR_PICKUP) {
+            try {
+                dispatchService.dispatchOrder(savedOrder.getId());
+                // Refresh order state since dispatchOrder updates it
+                savedOrder = orderRepository.findById(savedOrder.getId()).orElse(savedOrder);
+            } catch (Exception e) {
+                log.warn("Auto-dispatch failed for order {}: {}", savedOrder.getId(), e.getMessage());
+            }
+        }
+        
         return mapToResponse(savedOrder);
     }
 

@@ -24,13 +24,16 @@ public class DeliveryService {
     private final DeliveryPartnerRepository deliveryPartnerRepository;
     private final OrderRepository orderRepository;
     private final OrderStateMachine orderStateMachine;
+    private final OrderEventPublisher orderEventPublisher;
 
     public DeliveryService(DeliveryPartnerRepository deliveryPartnerRepository,
                            OrderRepository orderRepository,
-                           OrderStateMachine orderStateMachine) {
+                           OrderStateMachine orderStateMachine,
+                           OrderEventPublisher orderEventPublisher) {
         this.deliveryPartnerRepository = deliveryPartnerRepository;
         this.orderRepository = orderRepository;
         this.orderStateMachine = orderStateMachine;
+        this.orderEventPublisher = orderEventPublisher;
     }
 
     @Transactional
@@ -62,6 +65,7 @@ public class DeliveryService {
         }
 
         order.setDeliveryPartner(partner);
+        order.setStatus(OrderStatus.ASSIGNED);
         partner.setAvailable(false);
         deliveryPartnerRepository.save(partner);
 
@@ -91,7 +95,24 @@ public class DeliveryService {
         Order order = orderRepository.findById(orderId)
                 .orElseThrow(() -> new OrderNotFoundException("Order not found with id: " + orderId));
 
-        // Strict Resource Ownership Check
+        // If order is unassigned, and partner is trying to ACCEPT it
+        if (order.getDeliveryPartner() == null && newStatus == OrderStatus.ACCEPTED) {
+            if (order.getStatus() != OrderStatus.READY_FOR_PICKUP) {
+                throw new InvalidOrderStateException("Order must be READY_FOR_PICKUP to accept");
+            }
+            // Assign partner
+            order.setDeliveryPartner(partner);
+            order.setStatus(OrderStatus.ACCEPTED);
+            partner.setAvailable(false);
+            deliveryPartnerRepository.save(partner);
+            
+            Order savedOrder = orderRepository.save(order);
+            // Notify others it was assigned so it disappears from pool
+            orderEventPublisher.publishOrderAssigned(savedOrder);
+            return mapToResponse(savedOrder);
+        }
+
+        // Strict Resource Ownership Check for already assigned orders
         if (order.getDeliveryPartner() == null || !order.getDeliveryPartner().getId().equals(partner.getId())) {
             throw new AccessDeniedException("You are not assigned to this order.");
         }

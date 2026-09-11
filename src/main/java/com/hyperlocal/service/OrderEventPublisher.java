@@ -3,6 +3,7 @@ package com.hyperlocal.service;
 import com.hyperlocal.dto.EventType;
 import com.hyperlocal.dto.OrderAssignedEvent;
 import com.hyperlocal.dto.OrderStatusEvent;
+import com.hyperlocal.dto.NewDeliveryEvent;
 import com.hyperlocal.dto.RealtimeEvent;
 import com.hyperlocal.entity.Order;
 import lombok.RequiredArgsConstructor;
@@ -118,6 +119,65 @@ public class OrderEventPublisher {
         String partnerEmail = order.getDeliveryPartner().getUser().getEmail();
         messagingTemplate.convertAndSendToUser(partnerEmail, "/queue/delivery-orders", event);
 
+        // Also broadcast the assignment to the generic deliveries pool so other partners can remove it
+        RealtimeEvent<OrderStatusEvent> poolEvent = new RealtimeEvent<>(
+                EventType.DELIVERY_ASSIGNED,
+                Instant.now(),
+                new OrderStatusEvent(order.getId(), order.getStatus())
+        );
+        messagingTemplate.convertAndSend("/topic/deliveries/pool", poolEvent);
+
         log.info("Published ORDER_ASSIGNED for Order {} to Partner {}", order.getId(), partnerEmail);
+    }
+
+    public void publishNewDelivery(Order order, java.util.List<com.hyperlocal.entity.DeliveryPartner> candidates) {
+        // Calculate a fake or real distance & fee
+        Double distanceKm = 2.5; // Example
+        java.math.BigDecimal fee = java.math.BigDecimal.valueOf(150.0); // Example
+
+        NewDeliveryEvent deliveryData = new NewDeliveryEvent(
+            order.getId(),
+            order.getId(),
+            order.getShop().getId(),
+            order.getShop().getAddress() != null ? order.getShop().getAddress() : "Unknown Shop Address",
+            "Customer Destination",
+            distanceKm,
+            fee
+        );
+
+        RealtimeEvent<NewDeliveryEvent> event = new RealtimeEvent<>(
+                EventType.NEW_DELIVERY,
+                Instant.now(),
+                deliveryData
+        );
+
+        // Broadcast to a generic topic that delivery partners subscribe to
+        messagingTemplate.convertAndSend("/topic/deliveries/pool", event);
+
+        // OR we can send to each candidate individually
+        for (com.hyperlocal.entity.DeliveryPartner partner : candidates) {
+            String partnerEmail = partner.getUser().getEmail();
+            messagingTemplate.convertAndSendToUser(partnerEmail, "/queue/delivery-orders", event);
+        }
+        
+        log.info("Published NEW_DELIVERY for Order {} to {} candidates without leaking customer info", order.getId(), candidates.size());
+    }
+
+    public void publishDeliveryStatusChanged(Order order) {
+        RealtimeEvent<OrderStatusEvent> event = new RealtimeEvent<>(
+                EventType.DELIVERY_STATUS_CHANGED,
+                Instant.now(),
+                new OrderStatusEvent(order.getId(), order.getStatus())
+        );
+
+        if (order.getDeliveryPartner() != null) {
+            String partnerEmail = order.getDeliveryPartner().getUser().getEmail();
+            messagingTemplate.convertAndSendToUser(partnerEmail, "/queue/delivery-orders", event);
+        }
+        
+        messagingTemplate.convertAndSend("/topic/orders/" + order.getId(), event);
+        messagingTemplate.convertAndSend("/topic/shops/" + order.getShop().getId(), event);
+        
+        log.info("Published DELIVERY_STATUS_CHANGED for Order {}", order.getId());
     }
 }

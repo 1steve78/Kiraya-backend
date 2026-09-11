@@ -66,29 +66,31 @@ public class DispatchService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Order is already assigned to a delivery partner");
         }
 
-        DeliveryPartner bestPartner = findBestPartner(order)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.CONFLICT, "No suitable delivery partner available"));
+        List<DeliveryPartner> candidates = findCandidates(order);
+        if (candidates.isEmpty()) {
+            log.warn("No suitable delivery partners available for order {}", order.getId());
+            return;
+        }
 
-        order.setDeliveryPartner(bestPartner);
-        Order savedOrder = orderRepository.save(order);
-        orderEventPublisher.publishOrderAssigned(savedOrder);
+        // Broadcast to candidates instead of auto-assigning
+        orderEventPublisher.publishNewDelivery(order, candidates);
        
     }
 
-    public Optional<DeliveryPartner> findBestPartner(Order order) {
+    public List<DeliveryPartner> findCandidates(Order order) {
         Shop shop = order.getShop();
         Location shopLocation = (shop != null) ? shop.getLocation() : null;
 
         // 1. Fetch available partners
         List<DeliveryPartner> availablePartners = deliveryPartnerRepository.findByIsAvailableTrue();
         if (availablePartners.isEmpty()) {
-            return Optional.empty();
+            return List.of();
         }
 
-        // 2. Stage 1: Haversine Filtering (when locations are available)
+        // 2. Stage 1: Haversine Filtering
         List<DeliveryPartner> candidates;
         if (shopLocation != null) {
-            List<DeliveryPartner> nearbyCandidates = availablePartners.stream()
+            candidates = availablePartners.stream()
                     .filter(p -> p.getLocation() != null)
                     .map(p -> new CandidateTemp(p, GeoUtils.calculateHaversineDistanceKm(p.getLocation(), shopLocation)))
                     .filter(c -> c.straightLineDistance <= maxRadiusKm)
@@ -96,37 +98,16 @@ public class DispatchService {
                     .limit(maxRoutingCandidates)
                     .map(c -> c.partner)
                     .collect(Collectors.toList());
-
-            candidates = !nearbyCandidates.isEmpty() ? nearbyCandidates : availablePartners;
         } else {
             candidates = availablePartners;
         }
 
-        // 3. Stage 2: Workload Filtering & Routing Scoring
+        // 3. Stage 2: Workload Filtering
         List<OrderStatus> activeStatuses = List.of(OrderStatus.READY_FOR_PICKUP, OrderStatus.OUT_FOR_DELIVERY);
-        DeliveryPartner bestPartner = null;
-        double lowestScore = Double.POSITIVE_INFINITY;
-
-        for (DeliveryPartner partner : candidates) {
+        return candidates.stream().filter(partner -> {
             int activeOrders = orderRepository.countActiveOrdersForPartner(partner.getId(), activeStatuses);
-            if (activeOrders > MAX_ACTIVE_ORDERS) {
-                continue; // Skip overloaded partners
-            }
-
-            try {
-                DistanceResult route = distanceService.calculateDistance(partner, shop);
-                double score = calculateScore(route, activeOrders);
-
-                if (score < lowestScore) {
-                    lowestScore = score;
-                    bestPartner = partner;
-                }
-            } catch (DistanceServiceException e) {
-                log.warn("Routing calculation failed for partner {}: {}", partner.getId(), e.getMessage());
-            }
-        }
-
-        return Optional.ofNullable(bestPartner);
+            return activeOrders <= MAX_ACTIVE_ORDERS;
+        }).collect(Collectors.toList());
     }
 
     private double calculateScore(DistanceResult route, int activeOrders) {
