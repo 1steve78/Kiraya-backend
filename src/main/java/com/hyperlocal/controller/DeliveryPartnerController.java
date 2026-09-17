@@ -16,10 +16,14 @@ public class DeliveryPartnerController {
 
     private final DeliveryPartnerService partnerService;
     private final PresenceService presenceService;
+    private final com.hyperlocal.service.LocationService locationService;
+    private final com.hyperlocal.service.GeoLocationService geoLocationService;
 
-    public DeliveryPartnerController(DeliveryPartnerService partnerService ,PresenceService presenceService){
+    public DeliveryPartnerController(DeliveryPartnerService partnerService, PresenceService presenceService, com.hyperlocal.service.LocationService locationService, com.hyperlocal.service.GeoLocationService geoLocationService){
         this.partnerService = partnerService;
         this.presenceService = presenceService;
+        this.locationService = locationService;
+        this.geoLocationService = geoLocationService;
     }
 
     @PostMapping("/me/online")
@@ -57,5 +61,21 @@ public class DeliveryPartnerController {
                 .map(PartnerPresenceResponse::from)
                 .toList();
         return ResponseEntity.ok(responses);
+    }
+
+    @GetMapping("/nearby")
+    public ResponseEntity<List<com.hyperlocal.dto.NearbyPartnerResponse>> getNearbyPartners(
+            @RequestParam double latitude,
+            @RequestParam double longitude,
+            @RequestParam double radius
+    ) {
+        return ResponseEntity.ok(geoLocationService.findNearbyPartners(latitude, longitude, radius));
+    }
+
+    @GetMapping("/{id}/location")
+    public ResponseEntity<?> getPartnerLocation(@PathVariable Long id) {
+        return locationService.getLatestLocation(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 }

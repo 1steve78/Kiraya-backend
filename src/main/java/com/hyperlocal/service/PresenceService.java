@@ -27,10 +27,12 @@ public class PresenceService {
 
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
+    private final GeoLocationService geoLocationService;
 
-    public PresenceService(StringRedisTemplate redisTemplate ,ObjectMapper objectMapper){
+    public PresenceService(StringRedisTemplate redisTemplate, ObjectMapper objectMapper, GeoLocationService geoLocationService) {
         this.objectMapper = objectMapper;
         this.redisTemplate = redisTemplate;
+        this.geoLocationService = geoLocationService;
     }
 
     private  String buildKey(Long partnerId){
@@ -49,6 +51,7 @@ public class PresenceService {
     public void setOffline(Long partnerId) {
         redisTemplate.delete(buildKey(partnerId));
         redisTemplate.opsForSet().remove(AVAILABLE_SET_KEY, partnerId.toString());
+        geoLocationService.removePartner(partnerId);
     }
 
     public boolean heartBeat(Long partnerId){
@@ -100,6 +103,8 @@ public class PresenceService {
 
         if(!staleIds.isEmpty()){
             redisTemplate.opsForSet().remove(AVAILABLE_SET_KEY,staleIds.toArray());
+            // Also remove from Geo index
+            geoLocationService.removePartners(staleIds);
         }
         return onlinePartners;
     }

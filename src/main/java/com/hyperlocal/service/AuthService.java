@@ -9,6 +9,8 @@ import com.hyperlocal.entity.User;
 import com.hyperlocal.exception.UserAlreadyExistsException;
 import com.hyperlocal.repository.ShopRepository;
 import com.hyperlocal.repository.UserRepository;
+import com.hyperlocal.entity.DeliveryPartner;
+import com.hyperlocal.repository.DeliveryPartnerRepository;
 import com.hyperlocal.security.JwtService;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -28,18 +30,23 @@ public class AuthService {
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
 
+    private final DeliveryPartnerRepository deliveryPartnerRepository;
+
     public AuthService(UserRepository userRepository,
                        ShopRepository shopRepository,
                        PasswordEncoder passwordEncoder,
                        JwtService jwtService,
-                       AuthenticationManager authenticationManager) {
+                       AuthenticationManager authenticationManager,
+                       DeliveryPartnerRepository deliveryPartnerRepository) {
         this.userRepository = userRepository;
         this.shopRepository = shopRepository;
         this.passwordEncoder = passwordEncoder;
         this.jwtService = jwtService;
         this.authenticationManager = authenticationManager;
+        this.deliveryPartnerRepository = deliveryPartnerRepository;
     }
 
+    @org.springframework.transaction.annotation.Transactional
     public UserResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail())) {
             throw new UserAlreadyExistsException("Email is already registered");
@@ -52,6 +59,13 @@ public class AuthService {
         user.setRole(request.getRole() != null ? request.getRole() : Role.CUSTOMER);
 
         User savedUser = userRepository.save(user);
+
+        if (savedUser.getRole() == Role.DELIVERY_PARTNER) {
+            DeliveryPartner partner = new DeliveryPartner();
+            partner.setUser(savedUser);
+            partner.setVehicleType("BIKE"); // Default
+            deliveryPartnerRepository.save(partner);
+        }
 
         return new UserResponse(
                 savedUser.getId(),
