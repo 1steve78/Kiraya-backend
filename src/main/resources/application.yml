@@ -38,6 +38,8 @@ application:
 dispatch:
   max-radius-km: 5.0
   max-routing-candidates: 10
+  search-radius-km: 3.0
+  max-location-age-seconds: 30
 
 # Google Maps API Configuration
 google:

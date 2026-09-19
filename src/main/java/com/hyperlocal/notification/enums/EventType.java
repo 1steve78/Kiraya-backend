@@ -1,0 +1,12 @@
+package com.hyperlocal.notification.enums;
+
+public enum EventType {
+    NEW_ORDER,
+    ORDER_STATUS_CHANGED,
+    ORDER_ASSIGNED,
+    ORDER_CANCELLED,
+    NEW_DELIVERY,
+    DELIVERY_ASSIGNED,
+    DELIVERY_STATUS_CHANGED,
+    DELIVERY_CANCELLED
+}
