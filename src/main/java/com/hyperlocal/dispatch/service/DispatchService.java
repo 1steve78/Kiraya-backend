@@ -1,26 +1,27 @@
 package com.hyperlocal.dispatch.service;
 
-import com.hyperlocal.catalog.entity.Shop;
 import com.hyperlocal.common.model.Location;
+import com.hyperlocal.dispatch.dto.DeliveryPartnerCandidate;
+import com.hyperlocal.dispatch.dto.DispatchCandidateScore;
+import com.hyperlocal.dispatch.dto.DispatchDecision;
 import com.hyperlocal.dispatch.entity.DeliveryPartner;
-import com.hyperlocal.dispatch.model.DistanceResult;
 import com.hyperlocal.dispatch.repository.DeliveryPartnerRepository;
-import com.hyperlocal.dispatch.util.GeoUtils;
+import com.hyperlocal.dispatch.strategy.DispatchScoringStrategy;
 import com.hyperlocal.notification.service.OrderEventPublisher;
 import com.hyperlocal.order.entity.Order;
 import com.hyperlocal.order.enums.OrderStatus;
 import com.hyperlocal.order.repository.OrderRepository;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
+
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Service
@@ -30,28 +31,20 @@ public class DispatchService {
 
     private final OrderRepository orderRepository;
     private final DeliveryPartnerRepository deliveryPartnerRepository;
-    private final DistanceService distanceService;
     private final OrderEventPublisher orderEventPublisher;
-
-    @Value("${dispatch.max-radius-km:5.0}")
-    private double maxRadiusKm = 5.0;
-
-    @Value("${dispatch.max-routing-candidates:10}")
-    private int maxRoutingCandidates = 10;
-
-    private static final int MAX_ACTIVE_ORDERS = 3;
-    private static final double WEIGHT_DISTANCE = 0.5;
-    private static final double WEIGHT_WORKLOAD = 2.0;
-    private static final double WEIGHT_ETA = 0.3;
+    private final EligiblePartnerService eligiblePartnerService;
+    private final DispatchScoringStrategy scoringStrategy;
 
     public DispatchService(OrderRepository orderRepository,
                            DeliveryPartnerRepository deliveryPartnerRepository,
-                           DistanceService distanceService,
-                           OrderEventPublisher orderEventPublisher) {
+                           OrderEventPublisher orderEventPublisher,
+                           EligiblePartnerService eligiblePartnerService,
+                           DispatchScoringStrategy scoringStrategy) {
         this.orderRepository = orderRepository;
         this.deliveryPartnerRepository = deliveryPartnerRepository;
-        this.distanceService = distanceService;
         this.orderEventPublisher = orderEventPublisher;
+        this.eligiblePartnerService = eligiblePartnerService;
+        this.scoringStrategy = scoringStrategy;
     }
 
     @Transactional
@@ -66,63 +59,100 @@ public class DispatchService {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Order is already assigned to a delivery partner");
         }
 
-        List<DeliveryPartner> candidates = findCandidates(order);
-        if (candidates.isEmpty()) {
+        Location pickup = order.getShop() != null ? order.getShop().getLocation() : null;
+        if (pickup == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Order has no valid pickup location");
+        }
+
+        // 1. Discovery - Who can do this?
+        List<DeliveryPartnerCandidate> candidates = eligiblePartnerService.findEligiblePartners(
+                pickup.getLatitude(), pickup.getLongitude());
+
+        // 2. Optimization - Who should we try first?
+        DispatchDecision decision = findBestPartner(pickup, candidates);
+
+        if (decision.getSelectedPartnerId() == null) {
             log.warn("No suitable delivery partners available for order {}", order.getId());
             return;
         }
 
-        // Broadcast to candidates instead of auto-assigning
-        orderEventPublisher.publishNewDelivery(order, candidates);
-       
+        // For today, we just publish the event to the single best candidate.
+        // Tomorrow this becomes full Assignment logic.
+        DeliveryPartner bestPartner = deliveryPartnerRepository.findById(decision.getSelectedPartnerId())
+                .orElseThrow();
+        orderEventPublisher.publishNewDelivery(order, List.of(bestPartner));
     }
 
-    public List<DeliveryPartner> findCandidates(Order order) {
-        Shop shop = order.getShop();
-        Location shopLocation = (shop != null) ? shop.getLocation() : null;
-
-        // 1. Fetch available partners
-        List<DeliveryPartner> availablePartners = deliveryPartnerRepository.findByIsAvailableTrue();
-        if (availablePartners.isEmpty()) {
+    public List<DispatchCandidateScore> rankCandidates(List<DeliveryPartnerCandidate> candidates) {
+        if (candidates == null || candidates.isEmpty()) {
             return List.of();
         }
 
-        // 2. Stage 1: Haversine Filtering
-        List<DeliveryPartner> candidates;
-        if (shopLocation != null) {
-            candidates = availablePartners.stream()
-                    .filter(p -> p.getLocation() != null)
-                    .map(p -> new CandidateTemp(p, GeoUtils.calculateHaversineDistanceKm(p.getLocation(), shopLocation)))
-                    .filter(c -> c.straightLineDistance <= maxRadiusKm)
-                    .sorted(Comparator.comparingDouble(c -> c.straightLineDistance))
-                    .limit(maxRoutingCandidates)
-                    .map(c -> c.partner)
-                    .collect(Collectors.toList());
-        } else {
-            candidates = availablePartners;
+        List<DispatchCandidateScore> scoredCandidates = candidates.stream()
+                .filter(DeliveryPartnerCandidate::isEligible)
+                .map(this::scoreCandidate)
+                .collect(Collectors.toList());
+
+        if (scoredCandidates.isEmpty()) {
+            return List.of();
         }
 
-        // 3. Stage 2: Workload Filtering
+        // Tie-breaker rules:
+        // 1. Score (from strategy)
+        // 2. Freshness (lowest age)
+        // 3. Active workload
+        // 4. PartnerId (deterministic fallback)
+        scoredCandidates.sort(Comparator
+                .comparingDouble(DispatchCandidateScore::getScore)
+                .thenComparingLong(c -> c.getLocationFreshness() == null ? Long.MAX_VALUE : c.getLocationFreshness())
+                .thenComparingInt(c -> c.getActiveWorkload() == null ? Integer.MAX_VALUE : c.getActiveWorkload())
+                .thenComparingLong(DispatchCandidateScore::getPartnerId));
+
+        return scoredCandidates;
+    }
+
+    public DispatchDecision findBestPartner(Location pickup, List<DeliveryPartnerCandidate> candidates) {
+        if (candidates == null || candidates.isEmpty()) {
+            return new DispatchDecision(null, List.of(), "No candidates available");
+        }
+
+        List<DispatchCandidateScore> scoredCandidates = rankCandidates(candidates);
+
+        if (scoredCandidates.isEmpty()) {
+            return new DispatchDecision(null, List.of(), "No eligible candidates");
+        }
+
+        DispatchCandidateScore best = scoredCandidates.get(0);
+
+        return new DispatchDecision(
+                best.getPartnerId(),
+                scoredCandidates,
+                "Selected partner " + best.getPartnerId() + " based on configured scoring strategy and tie-breakers"
+        );
+    }
+
+    private DispatchCandidateScore scoreCandidate(DeliveryPartnerCandidate candidate) {
+        // Fetch workload
         List<OrderStatus> activeStatuses = List.of(OrderStatus.READY_FOR_PICKUP, OrderStatus.OUT_FOR_DELIVERY);
-        return candidates.stream().filter(partner -> {
-            int activeOrders = orderRepository.countActiveOrdersForPartner(partner.getId(), activeStatuses);
-            return activeOrders <= MAX_ACTIVE_ORDERS;
-        }).collect(Collectors.toList());
-    }
+        int activeWorkload = orderRepository.countActiveOrdersForPartner(candidate.getPartnerId(), activeStatuses);
 
-    private double calculateScore(DistanceResult route, int activeOrders) {
-        return (route.getDistanceKm() * WEIGHT_DISTANCE)
-                + (activeOrders * WEIGHT_WORKLOAD)
-                + (route.getDurationMinutes() * WEIGHT_ETA);
-    }
-
-    private static class CandidateTemp {
-        DeliveryPartner partner;
-        double straightLineDistance;
-
-        CandidateTemp(DeliveryPartner partner, double straightLineDistance) {
-            this.partner = partner;
-            this.straightLineDistance = straightLineDistance;
+        // Calculate freshness (seconds ago)
+        Long freshness = null;
+        if (candidate.getLastSeen() != null) {
+            freshness = ChronoUnit.SECONDS.between(candidate.getLastSeen(), Instant.now());
+            if (freshness < 0) freshness = 0L;
         }
+
+        // Apply Strategy
+        double score = scoringStrategy.calculateScore(candidate, activeWorkload);
+
+        return new DispatchCandidateScore(
+                candidate.getPartnerId(),
+                candidate.getDistanceKm(),
+                freshness,
+                null, // ETA not calculated yet
+                score,
+                activeWorkload
+        );
     }
 }

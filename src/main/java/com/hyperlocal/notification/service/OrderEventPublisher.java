@@ -2,7 +2,10 @@ package com.hyperlocal.notification.service;
 
 import com.hyperlocal.auth.entity.User;
 import com.hyperlocal.catalog.entity.Shop;
+import com.hyperlocal.dispatch.dto.Coordinates;
+import com.hyperlocal.dispatch.entity.DeliveryOffer;
 import com.hyperlocal.dispatch.entity.DeliveryPartner;
+import com.hyperlocal.notification.dto.DeliveryOfferEvent;
 import com.hyperlocal.notification.dto.NewDeliveryEvent;
 import com.hyperlocal.notification.dto.OrderAssignedEvent;
 import com.hyperlocal.notification.dto.OrderStatusEvent;
@@ -182,5 +185,84 @@ public class OrderEventPublisher {
         messagingTemplate.convertAndSend("/topic/shops/" + order.getShop().getId(), event);
         
         log.info("Published DELIVERY_STATUS_CHANGED for Order {}", order.getId());
+    }
+
+    public void publishDeliveryOfferCreated(DeliveryOffer offer, Order order, DeliveryPartner partner) {
+        Coordinates pickup = null;
+        if (order.getShop() != null && order.getShop().getLatitude() != null && order.getShop().getLongitude() != null) {
+            pickup = new Coordinates(order.getShop().getLatitude(), order.getShop().getLongitude());
+        }
+
+        DeliveryOfferEvent offerEvent = new DeliveryOfferEvent(
+                offer.getId(),
+                offer.getDeliveryId(),
+                pickup,
+                offer.getExpiresAt()
+        );
+
+        RealtimeEvent<DeliveryOfferEvent> event = new RealtimeEvent<>(
+                EventType.DELIVERY_OFFER_CREATED,
+                Instant.now(),
+                offerEvent
+        );
+
+        // 1. Partner user-queue by authenticated email
+        if (partner != null && partner.getUser() != null && partner.getUser().getEmail() != null) {
+            messagingTemplate.convertAndSendToUser(partner.getUser().getEmail(), "/queue/delivery-offers", event);
+        }
+
+        // 2. Partner queue / topic by partnerId
+        Long partnerId = offer.getPartnerId();
+        messagingTemplate.convertAndSend("/user/" + partnerId + "/queue/delivery-offers", event);
+        messagingTemplate.convertAndSend("/topic/partners/" + partnerId + "/offers", event);
+
+        log.info("Published DELIVERY_OFFER_CREATED for offer {} (order {}) to partner {}",
+                offer.getId(), offer.getDeliveryId(), partnerId);
+    }
+
+    public void publishDeliveryOfferAccepted(DeliveryOffer offer, Order order, DeliveryPartner partner) {
+        RealtimeEvent<DeliveryOfferEvent> event = new RealtimeEvent<>(
+                EventType.DELIVERY_OFFER_ACCEPTED,
+                Instant.now(),
+                new DeliveryOfferEvent(offer.getId(), offer.getDeliveryId(), null, offer.getExpiresAt())
+        );
+
+        if (partner != null && partner.getUser() != null && partner.getUser().getEmail() != null) {
+            messagingTemplate.convertAndSendToUser(partner.getUser().getEmail(), "/queue/delivery-offers", event);
+        }
+        messagingTemplate.convertAndSend("/topic/partners/" + offer.getPartnerId() + "/offers", event);
+
+        log.info("Published DELIVERY_OFFER_ACCEPTED for offer {} by partner {}", offer.getId(), offer.getPartnerId());
+    }
+
+    public void publishDeliveryOfferRejected(DeliveryOffer offer, Order order, DeliveryPartner partner) {
+        RealtimeEvent<DeliveryOfferEvent> event = new RealtimeEvent<>(
+                EventType.DELIVERY_OFFER_REJECTED,
+                Instant.now(),
+                new DeliveryOfferEvent(offer.getId(), offer.getDeliveryId(), null, offer.getExpiresAt())
+        );
+
+        if (partner != null && partner.getUser() != null && partner.getUser().getEmail() != null) {
+            messagingTemplate.convertAndSendToUser(partner.getUser().getEmail(), "/queue/delivery-offers", event);
+        }
+        messagingTemplate.convertAndSend("/topic/partners/" + offer.getPartnerId() + "/offers", event);
+
+        log.info("Published DELIVERY_OFFER_REJECTED for offer {} by partner {}", offer.getId(), offer.getPartnerId());
+    }
+
+    public void publishDeliveryOfferExpired(DeliveryOffer offer, Order order, DeliveryPartner partner) {
+        RealtimeEvent<DeliveryOfferEvent> event = new RealtimeEvent<>(
+                EventType.DELIVERY_OFFER_EXPIRED,
+                Instant.now(),
+                new DeliveryOfferEvent(offer.getId(), offer.getDeliveryId(), null, offer.getExpiresAt())
+        );
+
+        if (partner != null && partner.getUser() != null && partner.getUser().getEmail() != null) {
+            messagingTemplate.convertAndSendToUser(partner.getUser().getEmail(), "/queue/delivery-offers", event);
+        }
+        messagingTemplate.convertAndSend("/user/" + offer.getPartnerId() + "/queue/delivery-offers", event);
+        messagingTemplate.convertAndSend("/topic/partners/" + offer.getPartnerId() + "/offers", event);
+
+        log.info("Published DELIVERY_OFFER_EXPIRED for offer {} by partner {}", offer.getId(), offer.getPartnerId());
     }
 }

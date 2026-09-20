@@ -1,14 +1,15 @@
 package com.hyperlocal.dispatch.controller;
 
+import com.hyperlocal.common.model.Location;
 import com.hyperlocal.dispatch.dto.DeliveryPartnerCandidate;
+import com.hyperlocal.dispatch.dto.DispatchDecision;
+import com.hyperlocal.dispatch.dto.DispatchPreviewRequest;
 import com.hyperlocal.dispatch.enums.RejectionReason;
 import com.hyperlocal.dispatch.service.EligiblePartnerService;
 
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
+
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -17,9 +18,33 @@ import java.util.stream.Collectors;
 public class DispatchController {
 
     private final EligiblePartnerService eligiblePartnerService;
+    private final com.hyperlocal.dispatch.service.DispatchService dispatchService;
 
-    public DispatchController(EligiblePartnerService eligiblePartnerService) {
+    public DispatchController(EligiblePartnerService eligiblePartnerService,
+                              com.hyperlocal.dispatch.service.DispatchService dispatchService) {
         this.eligiblePartnerService = eligiblePartnerService;
+        this.dispatchService = dispatchService;
+    }
+
+    @PostMapping("/preview")
+    public ResponseEntity<DispatchDecision> getDispatchPreview(
+            @RequestBody DispatchPreviewRequest request) {
+
+        Location pickup = new Location(
+                request.getPickupLatitude(),
+                request.getPickupLongitude()
+        );
+
+        List<DeliveryPartnerCandidate> candidates =
+                eligiblePartnerService.findEligiblePartners(
+                        pickup.getLatitude(),
+                        pickup.getLongitude()
+                );
+
+        DispatchDecision decision =
+                dispatchService.findBestPartner(pickup, candidates);
+
+        return ResponseEntity.ok(decision);
     }
 
     @GetMapping("/candidates")

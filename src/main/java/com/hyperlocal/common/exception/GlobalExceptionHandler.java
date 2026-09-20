@@ -12,6 +12,7 @@ import com.hyperlocal.catalog.exception.ProductNotFoundException;
 import com.hyperlocal.catalog.exception.ShopNotFoundException;
 import com.hyperlocal.common.dto.ErrorResponse;
 import com.hyperlocal.dispatch.exception.DeliveryPartnerNotFoundException;
+import com.hyperlocal.dispatch.exception.InvalidAssignmentStateException;
 import com.hyperlocal.order.exception.InvalidOrderStateException;
 import com.hyperlocal.order.exception.OrderNotFoundException;
 
@@ -84,6 +85,16 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InvalidOrderStateException.class)
     public ResponseEntity<ErrorResponse> handleInvalidOrderStateException(InvalidOrderStateException ex) {
+        ErrorResponse errorResponse = new ErrorResponse(
+                HttpStatus.CONFLICT.value(),
+                ex.getMessage(),
+                null
+        );
+        return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
+    }
+
+    @ExceptionHandler(InvalidAssignmentStateException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidAssignmentStateException(InvalidAssignmentStateException ex) {
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.CONFLICT.value(),
                 ex.getMessage(),
