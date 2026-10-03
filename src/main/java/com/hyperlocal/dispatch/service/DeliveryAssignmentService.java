@@ -303,9 +303,9 @@ public class DeliveryAssignmentService {
         DeliveryOffer offer = deliveryOfferRepository.findById(offerId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Delivery offer not found with id: " + offerId));
 
-        // State validation: Offer must be PENDING (protect against duplicate acceptance)
-        if (offer.getStatus() != DeliveryOfferStatus.PENDING) {
-            throw new InvalidAssignmentStateException("Offer " + offerId + " is not in PENDING state (current: " + offer.getStatus() + ")");
+        // State validation: Offer must be able to transition to ACCEPTED (strict state model)
+        if (!offer.getStatus().canTransitionTo(DeliveryOfferStatus.ACCEPTED)) {
+            throw new InvalidAssignmentStateException("DELIVERY_ALREADY_ASSIGNED", "This delivery is no longer available.");
         }
 
         // Authorization check if partnerId provided
@@ -318,10 +318,10 @@ public class DeliveryAssignmentService {
 
         // Delivery state validation
         if (order.getStatus() != OrderStatus.OFFERED) {
-            throw new InvalidAssignmentStateException("Order " + order.getId() + " is not in OFFERED state (current: " + order.getStatus() + ")");
+            throw new InvalidAssignmentStateException("DELIVERY_ALREADY_ASSIGNED", "This delivery is no longer available.");
         }
         if (order.getDeliveryPartner() != null) {
-            throw new InvalidAssignmentStateException("Order " + order.getId() + " is already assigned to partner " + order.getDeliveryPartner().getId());
+            throw new InvalidAssignmentStateException("DELIVERY_ALREADY_ASSIGNED", "This delivery is no longer available.");
         }
 
         DeliveryPartner partner = deliveryPartnerRepository.findById(offer.getPartnerId())
@@ -333,31 +333,39 @@ public class DeliveryAssignmentService {
             throw new InvalidAssignmentStateException("Partner " + partner.getId() + " is currently BUSY and cannot accept new deliveries");
         }
 
-        // 1. Update Offer
+        // Atomic transition from PENDING -> ACCEPTED
+        Instant now = Instant.now();
+        int rowsUpdated = deliveryOfferRepository.updateOfferStatusConditionally(
+                offerId, DeliveryOfferStatus.PENDING, DeliveryOfferStatus.ACCEPTED, now);
+
+        if (rowsUpdated == 0) {
+            throw new InvalidAssignmentStateException("DELIVERY_ALREADY_ASSIGNED", "This delivery is no longer available.");
+        }
+
         offer.setStatus(DeliveryOfferStatus.ACCEPTED);
-        offer.setRespondedAt(Instant.now());
+        offer.setRespondedAt(now);
         DeliveryOffer savedOffer = deliveryOfferRepository.save(offer);
 
-        // 2. Update Order
+        // 1. Update Order
         order.setStatus(OrderStatus.ASSIGNED);
         order.setDeliveryPartner(partner);
         Order savedOrder = orderRepository.save(order);
 
-        // 3. Update Assignment context if present
+        // 2. Update Assignment context if present
         deliveryAssignmentRepository.findFirstByDeliveryIdOrderByCreatedAtDesc(order.getId()).ifPresent(assignment -> {
             assignment.setStatus(DeliveryAssignmentStatus.ASSIGNED);
             assignment.setUpdatedAt(Instant.now());
             deliveryAssignmentRepository.save(assignment);
         });
 
-        // 4. Update Partner DB state
+        // 3. Update Partner DB state
         partner.setAvailable(false);
         deliveryPartnerRepository.save(partner);
 
-        // 5. Update Partner Redis Presence to BUSY
+        // 4. Update Partner Redis Presence to BUSY
         presenceService.setBusy(partner.getId());
 
-        // 6. Publish events
+        // 5. Publish events
         orderEventPublisher.publishDeliveryOfferAccepted(savedOffer, savedOrder, partner);
         orderEventPublisher.publishOrderAssigned(savedOrder);
 
@@ -371,31 +379,39 @@ public class DeliveryAssignmentService {
         DeliveryOffer offer = deliveryOfferRepository.findById(offerId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Delivery offer not found with id: " + offerId));
 
-        if (offer.getStatus() != DeliveryOfferStatus.PENDING) {
-            throw new InvalidAssignmentStateException("Offer " + offerId + " is not in PENDING state (current: " + offer.getStatus() + ")");
+        if (!offer.getStatus().canTransitionTo(DeliveryOfferStatus.REJECTED)) {
+            throw new InvalidAssignmentStateException("DELIVERY_ALREADY_ASSIGNED", "This delivery is no longer available.");
         }
 
         if (partnerId != null && !offer.getPartnerId().equals(partnerId)) {
             throw new AccessDeniedException("Partner " + partnerId + " is not authorized to reject offer " + offerId);
         }
 
+        // Atomic transition from PENDING -> REJECTED
+        Instant now = Instant.now();
+        int rowsUpdated = deliveryOfferRepository.updateOfferStatusConditionally(
+                offerId, DeliveryOfferStatus.PENDING, DeliveryOfferStatus.REJECTED, now);
+
+        if (rowsUpdated == 0) {
+            throw new InvalidAssignmentStateException("DELIVERY_ALREADY_ASSIGNED", "This delivery is no longer available.");
+        }
+
+        offer.setStatus(DeliveryOfferStatus.REJECTED);
+        offer.setRespondedAt(now);
+        DeliveryOffer savedOffer = deliveryOfferRepository.save(offer);
+
         Order order = orderRepository.findById(offer.getDeliveryId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Order not found with id: " + offer.getDeliveryId()));
 
         DeliveryPartner partner = deliveryPartnerRepository.findById(offer.getPartnerId()).orElse(null);
 
-        // 1. Update Offer
-        offer.setStatus(DeliveryOfferStatus.REJECTED);
-        offer.setRespondedAt(Instant.now());
-        DeliveryOffer savedOffer = deliveryOfferRepository.save(offer);
-
-        // 2. Publish Reject event
+        // Publish Reject event
         orderEventPublisher.publishDeliveryOfferRejected(savedOffer, order, partner);
 
         log.info("Partner {} rejected offer {} for order {}. Moving to next candidate.",
                 offer.getPartnerId(), offerId, order.getId());
 
-        // 3. Sequential flow: Try next candidate
+        // Sequential flow: Try next candidate
         if (order.getStatus() == OrderStatus.OFFERED) {
             advanceAssignment(order);
         }
@@ -410,23 +426,30 @@ public class DeliveryAssignmentService {
             return Optional.empty();
         }
 
-        // Concurrency protection: only PENDING offers can be expired
-        if (offer.getStatus() != DeliveryOfferStatus.PENDING) {
-            log.info("Offer {} is no longer PENDING (current: {}), skipping expiration", offerId, offer.getStatus());
+        // Concurrency protection: only offers that can transition to EXPIRED can be expired
+        if (!offer.getStatus().canTransitionTo(DeliveryOfferStatus.EXPIRED)) {
+            log.info("Offer {} is in terminal or non-pending state (current: {}), skipping expiration", offerId, offer.getStatus());
             return Optional.empty();
         }
 
         Order order = orderRepository.findById(offer.getDeliveryId()).orElse(null);
         if (order == null || order.getStatus() == OrderStatus.ASSIGNED || order.getDeliveryPartner() != null) {
             log.info("Order {} is already assigned or null, skipping offer expiration", offer.getDeliveryId());
-            offer.setStatus(DeliveryOfferStatus.CANCELLED);
-            offer.setRespondedAt(Instant.now());
-            deliveryOfferRepository.save(offer);
+            return Optional.empty();
+        }
+
+        // Atomic transition from PENDING -> EXPIRED
+        Instant now = Instant.now();
+        int rowsUpdated = deliveryOfferRepository.updateOfferStatusConditionally(
+                offerId, DeliveryOfferStatus.PENDING, DeliveryOfferStatus.EXPIRED, now);
+
+        if (rowsUpdated == 0) {
+            log.info("Offer {} was already modified by another transaction (e.g. accepted), skipping expiration", offerId, offer.getStatus());
             return Optional.empty();
         }
 
         offer.setStatus(DeliveryOfferStatus.EXPIRED);
-        offer.setRespondedAt(Instant.now());
+        offer.setRespondedAt(now);
         DeliveryOffer savedOffer = deliveryOfferRepository.save(offer);
 
         DeliveryPartner partner = deliveryPartnerRepository.findById(offer.getPartnerId()).orElse(null);

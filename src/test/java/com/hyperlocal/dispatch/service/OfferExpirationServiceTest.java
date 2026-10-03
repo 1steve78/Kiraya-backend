@@ -111,6 +111,8 @@ class OfferExpirationServiceTest {
         partnerC = new DeliveryPartner();
         partnerC.setId(3L);
         partnerC.setUser(userC);
+
+        lenient().when(deliveryOfferRepository.updateOfferStatusConditionally(any(), any(), any(), any())).thenReturn(1);
     }
 
     @Test

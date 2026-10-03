@@ -113,6 +113,8 @@ class DeliveryAssignmentServiceTest {
         partnerB.setId(2L);
         partnerB.setUser(userB);
         partnerB.setAvailable(true);
+
+        lenient().when(deliveryOfferRepository.updateOfferStatusConditionally(any(), any(), any(), any())).thenReturn(1);
     }
 
     @Test
@@ -277,5 +279,30 @@ class DeliveryAssignmentServiceTest {
         assertNull(order.getDeliveryPartner());
         assertEquals(DeliveryOfferStatus.PENDING, offer.getStatus());
         verify(orderRepository, never()).save(order);
+    }
+
+    @Test
+    @DisplayName("Test 8: Atomic state transition: rowsUpdated == 0 -> throws DELIVERY_ALREADY_ASSIGNED")
+    void test8_AtomicTransition_RowsUpdatedZero_ThrowsException() {
+        DeliveryOffer offer = new DeliveryOffer(100L, 1L, Instant.now().plusSeconds(30));
+        offer.setId(10L);
+        offer.setStatus(DeliveryOfferStatus.PENDING);
+
+        order.setStatus(OrderStatus.OFFERED);
+
+        when(deliveryOfferRepository.findById(10L)).thenReturn(Optional.of(offer));
+        when(orderRepository.findById(100L)).thenReturn(Optional.of(order));
+        when(deliveryPartnerRepository.findById(1L)).thenReturn(Optional.of(partnerA));
+        when(presenceService.getPresence(1L)).thenReturn(Optional.of(new PartnerPresence(1L, AvailabilityStatus.ONLINE, Instant.now())));
+        // Atomic update returns 0 rows (someone else accepted or expired concurrently)
+        when(deliveryOfferRepository.updateOfferStatusConditionally(eq(10L), eq(DeliveryOfferStatus.PENDING), eq(DeliveryOfferStatus.ACCEPTED), any()))
+                .thenReturn(0);
+
+        InvalidAssignmentStateException ex = assertThrows(InvalidAssignmentStateException.class,
+                () -> assignmentService.acceptOffer(10L, 1L));
+
+        assertEquals("DELIVERY_ALREADY_ASSIGNED", ex.getCode());
+        assertEquals("This delivery is no longer available.", ex.getMessage());
+        verify(orderRepository, never()).save(any());
     }
 }

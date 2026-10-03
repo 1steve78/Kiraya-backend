@@ -18,6 +18,9 @@ public class DeliveryAssignment {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Version
+    private Long version;
+
     @Column(name = "delivery_id", nullable = false)
     private Long deliveryId;
 
@@ -88,6 +91,14 @@ public class DeliveryAssignment {
 
     public void setId(Long id) {
         this.id = id;
+    }
+
+    public Long getVersion() {
+        return version;
+    }
+
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     public Long getDeliveryId() {

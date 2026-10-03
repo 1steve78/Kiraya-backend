@@ -5,5 +5,16 @@ public enum DeliveryOfferStatus {
     ACCEPTED,
     REJECTED,
     EXPIRED,
-    CANCELLED
+    CANCELLED;
+
+    public boolean isTerminal() {
+        return this != PENDING;
+    }
+
+    public boolean canTransitionTo(DeliveryOfferStatus nextStatus) {
+        if (this == PENDING) {
+            return nextStatus == ACCEPTED || nextStatus == REJECTED || nextStatus == EXPIRED || nextStatus == CANCELLED;
+        }
+        return false;
+    }
 }
