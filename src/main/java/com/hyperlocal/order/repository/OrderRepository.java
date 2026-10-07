@@ -26,4 +26,7 @@ public interface OrderRepository extends JpaRepository<Order, Long> {
 
     @Query("SELECT COUNT(o) FROM Order o WHERE o.deliveryPartner.id = :partnerId AND o.status IN :statuses")
     int countActiveOrdersForPartner(@Param("partnerId") Long partnerId, @Param("statuses") List<OrderStatus> statuses);
+
+    @Query("SELECT o FROM Order o WHERE o.deliveryPartner.id = :partnerId AND o.status IN :statuses ORDER BY o.id DESC")
+    List<Order> findActiveOrdersForPartner(@Param("partnerId") Long partnerId, @Param("statuses") List<OrderStatus> statuses);
 }

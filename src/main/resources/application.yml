@@ -42,6 +42,10 @@ dispatch:
   max-location-age-seconds: 30
   offer-timeout-seconds: 15
   max-attempts: 5
+  tracking:
+    throttle-interval-ms: 1000
+    throttle-min-distance-meters: 0.0
+    heartbeat-interval-ms: 30000
 
 # Google Maps API Configuration
 google:
