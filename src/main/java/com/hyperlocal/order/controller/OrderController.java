@@ -1,6 +1,8 @@
 package com.hyperlocal.order.controller;
 
 import com.hyperlocal.auth.entity.User;
+import com.hyperlocal.dispatch.dto.CustomerLocationBroadcast;
+import com.hyperlocal.dispatch.service.DeliveryTrackingService;
 import com.hyperlocal.dispatch.service.DispatchService;
 import com.hyperlocal.order.dto.CreateOrderRequest;
 import com.hyperlocal.order.dto.OrderResponse;
@@ -8,6 +10,7 @@ import com.hyperlocal.order.dto.OrderStatusUpdateRequest;
 import com.hyperlocal.order.service.OrderService;
 
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,11 +24,17 @@ public class OrderController {
 
     private final OrderService orderService;
     private final DispatchService dispatchService;
+    private final DeliveryTrackingService deliveryTrackingService;
 
-    public OrderController(OrderService orderService , DispatchService dispatchService)
-    {
+    @Autowired
+    public OrderController(OrderService orderService, DispatchService dispatchService, DeliveryTrackingService deliveryTrackingService) {
         this.orderService = orderService;
         this.dispatchService = dispatchService;
+        this.deliveryTrackingService = deliveryTrackingService;
+    }
+
+    public OrderController(OrderService orderService, DispatchService dispatchService) {
+        this(orderService, dispatchService, null);
     }
 
     @PostMapping
@@ -70,5 +79,19 @@ public class OrderController {
 
         OrderResponse response = orderService.updateOrderStatus(orderId, request, currentUser.getEmail());
         return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/{orderId}/location")
+    public ResponseEntity<CustomerLocationBroadcast> getOrderLocation(
+            @PathVariable Long orderId,
+            @AuthenticationPrincipal User currentUser) {
+
+        orderService.getOrderById(orderId, currentUser.getEmail());
+        if (deliveryTrackingService == null) {
+            return ResponseEntity.noContent().build();
+        }
+        return deliveryTrackingService.getLatestDeliveryLocation(orderId)
+                .map(ResponseEntity::ok)
+                .orElseGet(() -> ResponseEntity.noContent().build());
     }
 }

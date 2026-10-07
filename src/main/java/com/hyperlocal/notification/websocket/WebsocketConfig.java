@@ -34,7 +34,7 @@ import java.util.regex.Pattern;
 public class WebsocketConfig implements WebSocketMessageBrokerConfigurer {
 
     private static final Logger log = LoggerFactory.getLogger(WebsocketConfig.class);
-    private static final Pattern DELIVERY_LOCATION_TOPIC = Pattern.compile("^/topic/delivery/(\\d+)/location$");
+    private static final Pattern DELIVERY_LOCATION_TOPIC = Pattern.compile("^/topic/deliver(?:y|ies)/(?:delivery-)?(\\d+)/location$");
 
     private final JwtService jwtService;
     private final UserDetailsService userDetailsService;

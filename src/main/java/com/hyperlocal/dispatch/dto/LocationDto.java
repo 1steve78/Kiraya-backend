@@ -8,50 +8,49 @@ import jakarta.validation.constraints.NotNull;
 import java.time.Instant;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-public record LocationUpdateRequest(
+public record LocationDto(
         Long partnerId,
 
         @NotNull(message = "Latitude is required")
         @DecimalMin(value = "-90.0", message = "Latitude must be >= -90.0")
         @DecimalMax(value = "90.0", message = "Latitude must be <= 90.0")
-        @JsonAlias({"lat"})
-        Double latitude,
+        @JsonAlias({"latitude"})
+        Double lat,
 
         @NotNull(message = "Longitude is required")
         @DecimalMin(value = "-180.0", message = "Longitude must be >= -180.0")
         @DecimalMax(value = "180.0", message = "Longitude must be <= 180.0")
-        @JsonAlias({"lng"})
-        Double longitude,
+        @JsonAlias({"longitude"})
+        Double lng,
 
         Instant timestamp,
 
         @JsonAlias({"orderId"})
         Long deliveryId
 ) {
-
-    public LocationUpdateRequest {
+    public LocationDto {
         if (timestamp == null) {
             timestamp = Instant.now();
         }
     }
 
-    public LocationUpdateRequest(Double latitude, Double longitude, Instant timestamp) {
-        this(null, latitude, longitude, timestamp, null);
+    public LocationDto(Long partnerId, Double lat, Double lng, Instant timestamp) {
+        this(partnerId, lat, lng, timestamp, null);
     }
 
-    public LocationUpdateRequest(Long partnerId, Double latitude, Double longitude, Instant timestamp) {
-        this(partnerId, latitude, longitude, timestamp, null);
+    public LocationDto(Double lat, Double lng, Instant timestamp) {
+        this(null, lat, lng, timestamp, null);
     }
 
-    public LocationUpdateRequest(Double latitude, Double longitude) {
-        this(null, latitude, longitude, Instant.now(), null);
+    public LocationDto(Double lat, Double lng) {
+        this(null, lat, lng, Instant.now(), null);
     }
 
-    public Double lat() {
-        return latitude;
+    public Double latitude() {
+        return lat;
     }
 
-    public Double lng() {
-        return longitude;
+    public Double longitude() {
+        return lng;
     }
 }

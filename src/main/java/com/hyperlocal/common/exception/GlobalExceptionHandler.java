@@ -16,6 +16,8 @@ import com.hyperlocal.dispatch.exception.InvalidAssignmentStateException;
 import com.hyperlocal.order.exception.InvalidOrderStateException;
 import com.hyperlocal.order.exception.OrderNotFoundException;
 
+import jakarta.persistence.OptimisticLockException;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.BadCredentialsException;
@@ -95,19 +97,25 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(InvalidAssignmentStateException.class)
     public ResponseEntity<ErrorResponse> handleInvalidAssignmentStateException(InvalidAssignmentStateException ex) {
+        String code = ex.getCode() != null ? ex.getCode() : "DELIVERY_ALREADY_ASSIGNED";
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.CONFLICT.value(),
+                code,
                 ex.getMessage(),
                 null
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);
     }
 
-    @ExceptionHandler(org.springframework.orm.ObjectOptimisticLockingFailureException.class)
-    public ResponseEntity<ErrorResponse> handleOptimisticLockingFailureException(org.springframework.orm.ObjectOptimisticLockingFailureException ex) {
+    @ExceptionHandler({
+            ObjectOptimisticLockingFailureException.class,
+            OptimisticLockException.class
+    })
+    public ResponseEntity<ErrorResponse> handleOptimisticLockingFailureException(Exception ex) {
         ErrorResponse errorResponse = new ErrorResponse(
                 HttpStatus.CONFLICT.value(),
-                "The order was modified by another transaction. Please refresh and try again.",
+                "DELIVERY_ALREADY_ASSIGNED",
+                "This delivery is no longer available.",
                 null
         );
         return ResponseEntity.status(HttpStatus.CONFLICT).body(errorResponse);

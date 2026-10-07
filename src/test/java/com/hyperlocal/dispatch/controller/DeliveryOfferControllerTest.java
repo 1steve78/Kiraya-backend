@@ -73,13 +73,28 @@ class DeliveryOfferControllerTest {
     @DisplayName("POST /delivery-offers/{offerId}/accept - Conflict returns 409 when already assigned or duplicate accept")
     void testAcceptOffer_Conflict() throws Exception {
         when(deliveryAssignmentService.acceptOffer(eq(10L), eq(1L)))
-                .thenThrow(new InvalidAssignmentStateException("Offer is not in PENDING state"));
+                .thenThrow(new InvalidAssignmentStateException("DELIVERY_ALREADY_ASSIGNED", "This delivery is no longer available."));
 
         mockMvc.perform(post("/delivery-offers/10/accept")
                         .header("X-Partner-Id", 1L)
                         .contentType(MediaType.APPLICATION_JSON))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").value("Offer is not in PENDING state"));
+                .andExpect(jsonPath("$.code").value("DELIVERY_ALREADY_ASSIGNED"))
+                .andExpect(jsonPath("$.message").value("This delivery is no longer available."));
+    }
+
+    @Test
+    @DisplayName("POST /delivery-offers/{offerId}/accept - Optimistic lock conflict returns 409")
+    void testAcceptOffer_OptimisticLockConflict() throws Exception {
+        when(deliveryAssignmentService.acceptOffer(eq(10L), eq(1L)))
+                .thenThrow(new org.springframework.orm.ObjectOptimisticLockingFailureException(DeliveryOffer.class, 10L));
+
+        mockMvc.perform(post("/delivery-offers/10/accept")
+                        .header("X-Partner-Id", 1L)
+                        .contentType(MediaType.APPLICATION_JSON))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("DELIVERY_ALREADY_ASSIGNED"))
+                .andExpect(jsonPath("$.message").value("This delivery is no longer available."));
     }
 
     @Test

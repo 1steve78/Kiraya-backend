@@ -1,0 +1,42 @@
+spring:
+  datasource:
+    url: jdbc:h2:mem:hyperlocal_test;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;MODE=PostgreSQL
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    database-platform: org.hibernate.dialect.H2Dialect
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+    properties:
+      hibernate:
+        format_sql: false
+
+  data:
+    redis:
+      repositories:
+        enabled: false
+
+application:
+  security:
+    jwt:
+      secret_key: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+      expiration: 86400000
+
+dispatch:
+  max-radius-km: 5.0
+  max-routing-candidates: 10
+  search-radius-km: 3.0
+  max-location-age-seconds: 30
+  offer-timeout-seconds: 15
+  max-attempts: 5
+  tracking:
+    throttle-interval-ms: 1000
+    throttle-min-distance-meters: 0.0
+    heartbeat-interval-ms: 30000
+
+google:
+  maps:
+    api-key: mock-key-for-test
